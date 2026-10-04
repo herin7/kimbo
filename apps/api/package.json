@@ -1,0 +1,38 @@
+{
+  "name": "@kimbo/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --env-file=../../.env --import tsx src/server.ts",
+    "start": "node --env-file=../../.env dist/server.js",
+    "build": "tsc -p tsconfig.build.json",
+    "build:lambda": "node scripts/build-lambda.mjs",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@fastify/aws-lambda": "^6.4.1",
+    "@fastify/cors": "^11.1.0",
+    "@fastify/multipart": "^9.3.0",
+    "@fastify/rate-limit": "^10.3.0",
+    "@kimbo/contracts": "0.0.0",
+    "@kimbo/domain": "0.0.0",
+    "drizzle-orm": "^0.45.3",
+    "fastify": "^5.6.1",
+    "pg": "^8.16.3",
+    "sarvamai": "^1.1.10",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.8",
+    "@types/pg": "^8.15.5",
+    "drizzle-kit": "^0.31.5",
+    "esbuild": "^0.28.2",
+    "tsx": "^4.20.6",
+    "typescript": "~6.0.3",
+    "vitest": "^3.2.4"
+  }
+}
