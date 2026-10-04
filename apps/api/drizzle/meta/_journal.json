@@ -8,6 +8,13 @@
       "when": 1791106582138,
       "tag": "0000_fast_tomas",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791145335606,
+      "tag": "0001_amazing_sinister_six",
+      "breakpoints": true
     }
   ]
 }

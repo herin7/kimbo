@@ -11,6 +11,8 @@ export interface ActivityRepository {
   getSessions(): Promise<ActivitySession[]>;
   getActiveSession(): Promise<ActivitySession | null>;
   saveSession(session: ActivitySession): Promise<void>;
+  replaceSessions(sessions: ActivitySession[]): Promise<void>;
+  clear(): Promise<void>;
 }
 
 class SQLiteActivityRepository implements ActivityRepository {
@@ -34,6 +36,14 @@ class SQLiteActivityRepository implements ActivityRepository {
     if (index >= 0) sessions[index] = session;
     else sessions.push(session);
     await Storage.setItem(KEY, JSON.stringify(sessions));
+  }
+
+  async replaceSessions(sessions: ActivitySession[]) {
+    await Storage.setItem(KEY, JSON.stringify(sessions));
+  }
+
+  async clear() {
+    await Storage.removeItem(KEY);
   }
 }
 

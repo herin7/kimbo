@@ -1,6 +1,6 @@
 import * as Haptics from "expo-haptics";
-import { usePathname, useRouter } from "expo-router";
-import { ChartSpline, Footprints, SunMedium } from "lucide-react-native";
+import { usePathname, useRouter, type Href } from "expo-router";
+import { ChartSpline, Footprints, SunMedium, UserRound } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { BackHandler, Platform, Pressable, StyleSheet, View, type LayoutChangeEvent } from "react-native";
 import Animated, { ReduceMotion, useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
@@ -12,6 +12,7 @@ const destinations = [
   { label: "Today", route: "/today" as const, Icon: SunMedium },
   { label: "Activity", route: "/activity" as const, Icon: Footprints },
   { label: "Progress", route: "/progress" as const, Icon: ChartSpline },
+  { label: "Profile", route: "/profile" as const, Icon: UserRound },
 ];
 
 type Route = Parameters<ReturnType<typeof useRouter>["push"]>[0];
@@ -44,8 +45,13 @@ export function useBackFallsBackToToday(isEnabled: boolean) {
   useEffect(() => {
     if (!isEnabled || Platform.OS !== "android") return;
     const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
-      if (router.canGoBack() || pathname === "/today") return false;
-      router.replace("/today");
+      if (pathname === "/today") return false;
+      if (destinations.some(({ route }) => route === pathname)) {
+        router.replace("/today");
+        return true;
+      }
+      if (router.canGoBack()) router.back();
+      else router.replace("/today");
       return true;
     });
     return () => subscription.remove();
@@ -106,7 +112,7 @@ export function MainNavigation() {
                 if (index === selectedIndex) return;
                 setPendingIndex(index);
                 void Haptics.selectionAsync();
-                goTo(route);
+                goTo(route as Href);
               }}
               style={styles.item}
             >

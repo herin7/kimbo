@@ -9,6 +9,8 @@ import type {
   FoodAnalysisProvider,
   TranscriptionProvider,
 } from "./modules/food-analysis/FoodAnalysisProvider.js";
+import type { AuthRepository } from "./modules/auth/AuthRepository.js";
+import { registerAuthRoutes } from "./modules/auth/auth.routes.js";
 import { registerFoodAnalysisRoutes } from "./modules/food-analysis/food-analysis.routes.js";
 import type { HealthDataRepository } from "./modules/health-data/HealthDataRepository.js";
 import { registerHealthDataRoutes } from "./modules/health-data/health-data.routes.js";
@@ -19,6 +21,7 @@ export interface AppDependencies {
   foodAnalysisProvider: FoodAnalysisProvider;
   transcriptionProvider: TranscriptionProvider;
   healthDataRepository?: HealthDataRepository;
+  authRepository?: AuthRepository;
 }
 
 export async function buildApp(dependencies: AppDependencies) {
@@ -37,8 +40,11 @@ export async function buildApp(dependencies: AppDependencies) {
 
   app.get("/health", async () => ({ status: "ok" }));
   await registerFoodAnalysisRoutes(app, dependencies);
+  if (dependencies.authRepository) {
+    await registerAuthRoutes(app, dependencies.authRepository);
+  }
   if (dependencies.healthDataRepository) {
-    await registerHealthDataRoutes(app, dependencies.healthDataRepository);
+    await registerHealthDataRoutes(app, dependencies.healthDataRepository, dependencies.authRepository);
   }
 
   app.setErrorHandler((error, request, reply) => {

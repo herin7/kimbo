@@ -2,6 +2,7 @@ import { ApiErrorResponseSchema, type ApiErrorResponse } from "@kimbo/contracts"
 import type { ZodType } from "zod";
 
 import type { AppError } from "../errors/AppError";
+import { getAuthToken } from "../storage/identity.repository";
 
 const DEFAULT_TIMEOUT_MS = 30_000;
 
@@ -22,6 +23,8 @@ function mapServerError(error: ApiErrorResponse): AppError {
       return { type: "INVALID_AI_RESPONSE" };
     case "VALIDATION_ERROR":
       return { type: "VALIDATION_ERROR", message: error.error.message };
+    case "UNAUTHORIZED":
+      return { type: "AUTH_ERROR" };
     default:
       return { type: "NETWORK_ERROR" };
   }
@@ -41,7 +44,10 @@ export async function apiRequest<T>(
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const response = await fetch(`${apiBaseUrl}${path}`, { ...init, signal: controller.signal });
+    const headers = new Headers(init?.headers);
+    const token = await getAuthToken();
+    if (token && !headers.has("authorization")) headers.set("authorization", `Bearer ${token}`);
+    const response = await fetch(`${apiBaseUrl}${path}`, { ...init, headers, signal: controller.signal });
     const body: unknown = await response.json();
 
     if (!response.ok) {

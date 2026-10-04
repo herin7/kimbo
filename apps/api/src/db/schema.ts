@@ -1,4 +1,4 @@
-import { boolean, date, doublePrecision, integer, pgEnum, pgTable, primaryKey, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { boolean, date, doublePrecision, integer, pgEnum, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 export const goalType = pgEnum("goal_type", ["lose", "maintain", "gain"]);
 export const activityLevel = pgEnum("activity_level", ["sedentary", "light", "moderate", "very_active"]);
@@ -8,6 +8,16 @@ export const sessionState = pgEnum("activity_session_state", ["active", "ended",
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey(),
+  name: text("name"),
+  email: text("email"),
+  passwordHash: text("password_hash"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [uniqueIndex("users_email_unique").on(table.email)]);
+
+export const authSessions = pgTable("auth_sessions", {
+  tokenHash: text("token_hash").primaryKey(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

@@ -5,7 +5,8 @@ export type AppErrorCode =
   | "NOT_FOUND"
   | "CONFLICT"
   | "RATE_LIMITED"
-  | "INTERNAL_ERROR";
+  | "INTERNAL_ERROR"
+  | "UNAUTHORIZED";
 
 export class AppError extends Error {
   constructor(

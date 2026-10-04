@@ -8,6 +8,7 @@ export type AppError =
   | { type: "PERMISSION_DENIED"; permission: PermissionType }
   | { type: "CAMERA_ERROR" }
   | { type: "VALIDATION_ERROR"; message: string }
+  | { type: "AUTH_ERROR" }
   | { type: "STORAGE_ERROR" }
   | { type: "UNKNOWN_ERROR" };
 
@@ -27,6 +28,8 @@ export function mapAppErrorToMessage(error: AppError): string {
       return "The camera couldn't start. Choose a photo or describe the meal instead.";
     case "VALIDATION_ERROR":
       return error.message;
+    case "AUTH_ERROR":
+      return "That email or password didn't match. Try a demo account below.";
     case "STORAGE_ERROR":
       return "Kimbo couldn't save that on this device. Please try again.";
     case "UNKNOWN_ERROR":

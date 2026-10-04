@@ -19,6 +19,8 @@ export interface MealRepository {
   getDraft(): Promise<MealDraft | null>;
   saveDraft(draft: MealDraft): Promise<void>;
   clearDraft(): Promise<void>;
+  replaceMeals(meals: ConfirmedMeal[]): Promise<void>;
+  clear(): Promise<void>;
 }
 
 class SQLiteMealRepository implements MealRepository {
@@ -54,6 +56,14 @@ class SQLiteMealRepository implements MealRepository {
 
   async clearDraft(): Promise<void> {
     await Storage.removeItem(MEAL_DRAFT_KEY);
+  }
+
+  async replaceMeals(meals: ConfirmedMeal[]): Promise<void> {
+    await Storage.setItem(MEALS_KEY, JSON.stringify(meals));
+  }
+
+  async clear(): Promise<void> {
+    await Promise.all([Storage.removeItem(MEALS_KEY), Storage.removeItem(MEAL_DRAFT_KEY)]);
   }
 }
 
