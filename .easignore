@@ -1,0 +1,34 @@
+# ponytail: .easignore replaces every .gitignore for EAS uploads, so the gitignore rules are repeated here.
+node_modules/
+.env
+.env.*
+!.env.example
+temp.env
+*.local
+.tmp/
+.agents/
+.claude/
+skillsa/
+scripts/
+.expo/
+dist/
+build/
+.gradle/
+.kotlin/
+.cxx/
+*.tsbuildinfo
+*.jks
+*.keystore
+*.p8
+*.p12
+*.key
+*.pem
+*.hprof
+*.iml
+.idea/
+local.properties
+*.jsbundle
+apps/mobile/android/app/src/main/java/inline/
+# api is only needed as an npm workspace manifest for the lockfile
+apps/api/*
+!apps/api/package.json
