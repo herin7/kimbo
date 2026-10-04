@@ -1,14 +1,16 @@
-import { Redirect } from "expo-router";
+import { Redirect, type Href } from "expo-router";
 import { View } from "react-native";
 
 import { Screen, Text, useKimboTheme } from "@/design-system";
 import { useOnboardingStatus } from "@/features/onboarding";
+import { useAuthSession } from "@/features/auth/hooks/useAuth";
 
 export default function BootstrapRoute() {
   const { spacing } = useKimboTheme();
   const onboarding = useOnboardingStatus();
+  const auth = useAuthSession();
 
-  if (onboarding.isPending) {
+  if (onboarding.isPending || auth.isPending) {
     return (
       <Screen scroll={false}>
         <View style={{ flex: 1, gap: spacing.md, justifyContent: "center" }}>
@@ -19,5 +21,6 @@ export default function BootstrapRoute() {
     );
   }
 
+  if (!auth.data) return <Redirect href={"/login" as Href} />;
   return <Redirect href={onboarding.data ? "/today" : "/onboarding"} />;
 }

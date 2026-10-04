@@ -8,6 +8,7 @@ const HEALTH_GOAL_KEY = "kimbo.health-goal.v1";
 export interface OnboardingRepository {
   getHealthGoal(): Promise<HealthGoal | null>;
   saveHealthGoal(goal: HealthGoal): Promise<void>;
+  clearHealthGoal(): Promise<void>;
 }
 
 class SQLiteOnboardingRepository implements OnboardingRepository {
@@ -30,6 +31,10 @@ class SQLiteOnboardingRepository implements OnboardingRepository {
 
   async saveHealthGoal(goal: HealthGoal): Promise<void> {
     await Storage.setItem(HEALTH_GOAL_KEY, JSON.stringify(goal));
+  }
+
+  async clearHealthGoal(): Promise<void> {
+    await Storage.removeItem(HEALTH_GOAL_KEY);
   }
 }
 

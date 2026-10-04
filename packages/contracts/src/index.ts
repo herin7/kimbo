@@ -175,6 +175,33 @@ export const TodayResponseSchema = z.object({
 });
 export type TodayResponse = z.infer<typeof TodayResponseSchema>;
 
+export const UserProfileSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().trim().min(1).max(80),
+  email: z.string().trim().email().max(254),
+  createdAt: TimestampSchema,
+});
+export type UserProfile = z.infer<typeof UserProfileSchema>;
+
+export const LoginRequestSchema = z.object({
+  email: z.string().trim().email().max(254).transform((value) => value.toLowerCase()),
+  password: z.string().min(8).max(128),
+});
+export type LoginRequest = z.infer<typeof LoginRequestSchema>;
+
+export const AuthSessionSchema = z.object({
+  token: z.string().min(32).max(256),
+  user: UserProfileSchema,
+});
+export type AuthSession = z.infer<typeof AuthSessionSchema>;
+
+export const LoginResponseSchema = AuthSessionSchema.extend({
+  goal: HealthGoalSchema,
+  meals: z.array(ConfirmedMealSchema),
+  activitySessions: z.array(ActivitySessionSchema),
+});
+export type LoginResponse = z.infer<typeof LoginResponseSchema>;
+
 export const InsightFactsSchema = z.object({
   daysWithData: z.number().int().min(0).max(7),
   daysWithinCalorieGoal: z.number().int().min(0).max(7),
@@ -210,6 +237,7 @@ export const ApiErrorCodeSchema = z.enum([
   "CONFLICT",
   "RATE_LIMITED",
   "INTERNAL_ERROR",
+  "UNAUTHORIZED",
 ]);
 export type ApiErrorCode = z.infer<typeof ApiErrorCodeSchema>;
 

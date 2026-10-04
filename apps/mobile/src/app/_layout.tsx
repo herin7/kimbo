@@ -18,6 +18,7 @@ import { useOnboardingStatus } from "@/features/onboarding";
 import { LiveActivityCoordinator } from "@/features/activity/components/LiveActivityCoordinator";
 import { KimboNudgeScheduler } from "@/features/kimbo/components/KimboNudgeScheduler";
 import { KimboModePermissionGate } from "@/features/activity/components/KimboModePermissionGate";
+import { useAuthSession } from "@/features/auth/hooks/useAuth";
 
 void SplashScreen.preventAutoHideAsync();
 
@@ -27,7 +28,8 @@ const tabScreenOptions = { animation: "fade", animationDuration: 180, headerShow
 function RootStack() {
   const { colors, scheme } = useKimboTheme();
   const { data: goal } = useOnboardingStatus();
-  useBackFallsBackToToday(Boolean(goal));
+  const { data: auth } = useAuthSession();
+  useBackFallsBackToToday(Boolean(goal && auth));
   const [isIntroVisible, setIsIntroVisible] = useState(true);
   const hideIntro = useCallback(() => setIsIntroVisible(false), []);
 
@@ -44,10 +46,12 @@ function RootStack() {
         }}
       >
         <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen name="login" options={{ headerShown: false }} />
         <Stack.Screen name="onboarding" options={{ headerShown: false }} />
         <Stack.Screen name="today" options={tabScreenOptions} />
         <Stack.Screen name="progress" options={tabScreenOptions} />
         <Stack.Screen name="activity" options={tabScreenOptions} />
+        <Stack.Screen name="profile" options={tabScreenOptions} />
         <Stack.Screen
           name="meal/capture"
           options={{
@@ -63,10 +67,10 @@ function RootStack() {
         <Stack.Screen name="meal/voice" options={{ title: "Voice meal" }} />
         <Stack.Screen name="meal/camera" options={{ headerShown: false }} />
       </Stack>
-      <LiveActivityCoordinator />
-      <KimboNudgeScheduler />
+      {auth ? <LiveActivityCoordinator /> : null}
+      {auth ? <KimboNudgeScheduler /> : null}
       <MainNavigation />
-      <KimboModePermissionGate />
+      {auth ? <KimboModePermissionGate /> : null}
       {isIntroVisible ? <KimboIntro onDone={hideIntro} /> : null}
     </>
   );
