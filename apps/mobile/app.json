@@ -9,7 +9,7 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "bundleIdentifier": "com.superkalam.kimbo",
-      "icon": "./assets/expo.icon",
+      "icon": "./assets/images/icon.png",
       "runtimeVersion": {
         "policy": "appVersion"
       }
