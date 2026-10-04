@@ -1,0 +1,25 @@
+{
+  "name": "kimbo",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/mobile",
+    "apps/api",
+    "packages/contracts",
+    "packages/domain"
+  ],
+  "scripts": {
+    "build:shared": "npm run build --workspace @kimbo/contracts && npm run build --workspace @kimbo/domain",
+    "build": "npm run build:shared && npm run build --workspace @kimbo/api",
+    "pretypecheck": "npm run build:shared",
+    "pretest": "npm run build:shared",
+    "predev:api": "npm run build:shared",
+    "predev:mobile": "npm run build:shared",
+    "dev:mobile": "npm run start --workspace @kimbo/mobile",
+    "dev:api": "npm run dev --workspace @kimbo/api",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "sarvam:check": "node --env-file=.env scripts/check-sarvam.mjs"
+  }
+}
