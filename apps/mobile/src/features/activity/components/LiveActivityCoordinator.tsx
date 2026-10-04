@@ -44,6 +44,8 @@ export function LiveActivityCoordinator() {
       return;
     }
     const isNew = presentedSessionId.current !== session.id;
+    // Claim the session up front so overlapping renders don't start it twice; release it if the
+    // start fails so the next render retries instead of silently leaving the island on "Start walk".
     presentedSessionId.current = session.id;
     const progress = {
       current: steps,
@@ -53,7 +55,10 @@ export function LiveActivityCoordinator() {
     };
     void resolveLiveActivityProvider()
       .then((provider) => (isNew ? provider.start({ type: "walking", ...progress }) : provider.update(progress)))
-      .catch(() => undefined);
+      .catch((error: unknown) => {
+        if (isNew && presentedSessionId.current === session.id) presentedSessionId.current = null;
+        console.warn("Kimbo: live walk sync failed", error);
+      });
   }, [session, stepTarget, steps]);
 
   // Give the island today's picture so it is useful without opening the app.
