@@ -31,6 +31,7 @@ import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
+import android.view.ViewTreeObserver
 import android.view.WindowManager
 import android.view.animation.DecelerateInterpolator
 import android.view.animation.OvershootInterpolator
@@ -753,18 +754,28 @@ internal class SystemActivityIsland(private val context: Context) {
     val container = root ?: return
     val params = windowParams ?: return
     val finish = {
-      params.width = compactWidth
-      params.height = compactHeight
-      runCatching { windowManager.updateViewLayout(container, params) }
-      container.scaleX = 1f
-      container.scaleY = 1f
-      container.background = islandBackground(compactHeight / 2f)
       expandedContent?.visibility = View.GONE
       compactContent?.apply {
         visibility = View.VISIBLE
         alpha = 0f
-        animate().alpha(1f).setDuration(if (animationsEnabled()) 140L else 0L).start()
       }
+      // Undo the shrink transform only once the window has been laid out at compact size.
+      // Resetting it before that relayout draws one frame of the old wide layout pinned to the
+      // left of the new narrow window, which looked like the pill jumping left then re-centring.
+      container.viewTreeObserver.addOnPreDrawListener(object : ViewTreeObserver.OnPreDrawListener {
+        override fun onPreDraw(): Boolean {
+          if (container.width > compactWidth) return true
+          container.viewTreeObserver.removeOnPreDrawListener(this)
+          container.scaleX = 1f
+          container.scaleY = 1f
+          container.background = islandBackground(compactHeight / 2f)
+          compactContent?.animate()?.alpha(1f)?.setDuration(if (animationsEnabled()) 140L else 0L)?.start()
+          return true
+        }
+      })
+      params.width = compactWidth
+      params.height = compactHeight
+      runCatching { windowManager.updateViewLayout(container, params) }
     }
     if (!animationsEnabled()) {
       finish()
