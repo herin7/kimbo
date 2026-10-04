@@ -151,8 +151,9 @@ export function ActivityScreen() {
       </View>
 
       <View style={[styles.activeHero, { borderColor: colors.border, borderRadius: radius.xl, gap: spacing.lg, padding: spacing.xl }]}>
-        <SurfaceGradient from={colors.movementWashFrom} to={colors.movementWashTo} />
-        <SurfaceGradient center={{ x: 0.5, y: 0.42 }} from={colors.stepsGlow} to={colors.stepsGlowFade} variant="radial" />
+        {/* Same wash + corner glow recipe as the Today hero, in green for a walk. */}
+        <SurfaceGradient borderRadius={radius.xl} from={colors.movementWashFrom} to={colors.movementWashTo} />
+        <SurfaceGradient borderRadius={radius.xl} center={{ x: 0.9, y: 0 }} from={colors.stepsGlow} to={colors.stepsGlowFade} variant="radial" />
         <View style={[styles.walkPill, { backgroundColor: colors.surfaceElevated, borderColor: colors.border, borderRadius: radius.pill, gap: spacing.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.sm }]}>
           <Footprints color={colors.steps} size={16} strokeWidth={2.4} />
           <Text color="steps" variant="caption">LIVE WALK</Text>
