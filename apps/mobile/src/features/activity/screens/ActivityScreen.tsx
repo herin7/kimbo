@@ -112,6 +112,7 @@ export function ActivityScreen() {
 
         <Animated.View entering={FadeInDown.duration(motion.duration.slow).easing(motion.easing.standard).reduceMotion(ReduceMotion.System)}>
           <Card style={[styles.hero, { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: radius.xl }]}>
+            <SurfaceGradient borderRadius={radius.xl} from={colors.movementWashFrom} to={colors.movementWashTo} />
             <View pointerEvents="none" style={[styles.heroGlow, { backgroundColor: colors.brandGlow }]} />
             <ProgressRing accessibilityLabel="Daily step progress" color={colors.steps} size={198} strokeWidth={12} value={progress}>
               <Text variant="numericLarge">{controller.todaySteps.toLocaleString()}</Text>
@@ -123,8 +124,8 @@ export function ActivityScreen() {
 
         <Card variant="outlined">
           <KimboSays
-            line={progress >= 1 ? "Goal's done, but a bonus lap never hurt anyone." : `${Math.max(0, goal.dailyStepTarget - controller.todaySteps).toLocaleString()} steps to go. Walk with me?`}
-            mood={progress >= 1 ? "happy" : "playful"}
+            line={day?.reaction.line ?? (progress >= 1 ? "Goal's done, but a bonus lap never hurt anyone." : `${Math.max(0, goal.dailyStepTarget - controller.todaySteps).toLocaleString()} steps to go. Walk with me?`)}
+            mood={day?.reaction.mood ?? (progress >= 1 ? "happy" : "playful")}
           />
         </Card>
 
@@ -150,8 +151,12 @@ export function ActivityScreen() {
       </View>
 
       <View style={[styles.activeHero, { borderColor: colors.border, borderRadius: radius.xl, gap: spacing.lg, padding: spacing.xl }]}>
-        <SurfaceGradient from={colors.heroWashFrom} to={colors.heroWashTo} />
+        <SurfaceGradient from={colors.movementWashFrom} to={colors.movementWashTo} />
         <SurfaceGradient center={{ x: 0.5, y: 0.42 }} from={colors.stepsGlow} to={colors.stepsGlowFade} variant="radial" />
+        <View style={[styles.walkPill, { backgroundColor: colors.surfaceElevated, borderColor: colors.border, borderRadius: radius.pill, gap: spacing.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.sm }]}>
+          <Footprints color={colors.steps} size={16} strokeWidth={2.4} />
+          <Text color="steps" variant="caption">LIVE WALK</Text>
+        </View>
         <View style={styles.center}>
           <Text color="secondary" style={styles.eyebrow} variant="caption">ELAPSED</Text>
           <Text style={[styles.elapsed, { color: colors.textPrimary }]}>{elapsed}</Text>
@@ -185,7 +190,8 @@ export function ActivityScreen() {
         </Card>
       ) : null}
       <LiveIslandControl />
-      <Button loading={controller.isSaving} onPress={controller.end} variant="danger">End activity</Button>
+      {controller.endError ? <Text accessibilityRole="alert" color="danger" variant="bodySmall">{controller.endError}</Text> : null}
+      <Button loading={controller.isSaving} onPress={controller.end} size="lg" variant="danger">End walk safely</Button>
     </Screen>
   );
 }
@@ -228,6 +234,7 @@ const styles = StyleSheet.create({
   heroGlow: { borderRadius: 180, height: 280, left: -150, opacity: 0.75, position: "absolute", top: -160, width: 280 },
   centerText: { maxWidth: 280, textAlign: "center" },
   activeHero: { alignItems: "center", borderWidth: StyleSheet.hairlineWidth, overflow: "hidden" },
+  walkPill: { alignItems: "center", borderWidth: StyleSheet.hairlineWidth, flexDirection: "row" },
   center: { alignItems: "center" },
   eyebrow: { letterSpacing: 1.4 },
   liveBadge: { alignItems: "center", borderWidth: StyleSheet.hairlineWidth, flexDirection: "row", gap: 8, paddingHorizontal: 12, paddingVertical: 7 },

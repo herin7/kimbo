@@ -17,6 +17,7 @@ declare class KimboActivityModule extends NativeModule<KimboActivityModuleEvents
   hasOverlayPermission(): boolean;
   requestOverlayPermission(): Promise<boolean>;
   isOverlayEnabled(): boolean;
+  isOverlayRunning(): boolean;
   setOverlayEnabled(isEnabled: boolean): void;
   consumePendingLiveActivityAction(): LiveActivityActionEventPayload | null;
   setIslandMeal(meal: IslandMeal): void;

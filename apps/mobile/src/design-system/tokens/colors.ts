@@ -35,6 +35,8 @@ export const colorPalettes = {
     heroGlowFade: "rgba(232, 95, 67, 0)",
     stepsGlow: "rgba(32, 136, 103, 0.16)",
     stepsGlowFade: "rgba(32, 136, 103, 0)",
+    movementWashFrom: "#E7F3ED",
+    movementWashTo: "#F8F2EA",
   },
   dark: {
     background: "#090B0A",
@@ -72,6 +74,8 @@ export const colorPalettes = {
     heroGlowFade: "rgba(255, 118, 87, 0)",
     stepsGlow: "rgba(95, 203, 156, 0.22)",
     stepsGlowFade: "rgba(95, 203, 156, 0)",
+    movementWashFrom: "#10231B",
+    movementWashTo: "#0C1110",
   },
 } as const;
 

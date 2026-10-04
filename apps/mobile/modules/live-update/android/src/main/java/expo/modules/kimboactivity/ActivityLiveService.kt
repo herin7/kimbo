@@ -143,6 +143,8 @@ class ActivityLiveService : Service() {
       context.getSharedPreferences(ISLAND_PREFERENCES, Context.MODE_PRIVATE)
         .getBoolean(ISLAND_ENABLED_KEY, false)
 
+    internal fun isRunning(): Boolean = activeService != null
+
     internal fun setOverlayEnabled(context: Context, isEnabled: Boolean) {
       context.getSharedPreferences(ISLAND_PREFERENCES, Context.MODE_PRIVATE)
         .edit()

@@ -15,12 +15,14 @@ import Animated, {
 import { Button, Card, Text, useKimboTheme } from "@/design-system";
 import { KimboCompanion } from "@/features/kimbo/components/KimboCompanion";
 import { kimboMode, useKimboMode } from "@/features/kimbo/kimbo-mode.store";
+import { useKimboDay } from "@/features/kimbo/hooks/useKimboDay";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export function LiveIslandControl() {
   const { colors, motion, radius, spacing } = useKimboTheme();
   const { hasPermission, isAvailable, isEnabled } = useKimboMode();
+  const day = useKimboDay();
   const [isRequesting, setIsRequesting] = useState(false);
   const activation = useSharedValue(isEnabled ? 1 : 0);
   const shimmer = useSharedValue(0);
@@ -119,7 +121,7 @@ export function LiveIslandControl() {
             <Text style={[styles.previewLabel, { color: colors.activityIslandPrimary }]} variant="bodySmall">Island</Text>
           </View>
           {isReady ? (
-            <KimboCompanion framed={false} mood="happy" size={36} />
+            <KimboCompanion framed={false} mood={day?.reaction.mood ?? "neutral"} size={36} />
           ) : (
             <Sparkles color={colors.activityIslandSecondary} size={20} strokeWidth={2.1} />
           )}
