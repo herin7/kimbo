@@ -113,7 +113,7 @@ export function ActivityScreen() {
         <Animated.View entering={FadeInDown.duration(motion.duration.slow).easing(motion.easing.standard).reduceMotion(ReduceMotion.System)}>
           <Card style={[styles.hero, { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: radius.xl }]}>
             <SurfaceGradient borderRadius={radius.xl} from={colors.movementWashFrom} to={colors.movementWashTo} />
-            <View pointerEvents="none" style={[styles.heroGlow, { backgroundColor: colors.brandGlow }]} />
+            <SurfaceGradient borderRadius={radius.xl} center={{ x: 0.9, y: 0 }} from={colors.stepsGlow} to={colors.stepsGlowFade} variant="radial" />
             <ProgressRing accessibilityLabel="Daily step progress" color={colors.steps} size={198} strokeWidth={12} value={progress}>
               <Text variant="numericLarge">{controller.todaySteps.toLocaleString()}</Text>
               <Text color="secondary" variant="bodySmall">of {goal.dailyStepTarget.toLocaleString()} steps</Text>
@@ -232,7 +232,6 @@ const styles = StyleSheet.create({
   permissionCard: { alignItems: "center", flexDirection: "row" },
   permissionCopy: { flex: 1, marginLeft: 12 },
   hero: { alignItems: "center", borderWidth: StyleSheet.hairlineWidth, gap: 18, overflow: "hidden" },
-  heroGlow: { borderRadius: 180, height: 280, left: -150, opacity: 0.75, position: "absolute", top: -160, width: 280 },
   centerText: { maxWidth: 280, textAlign: "center" },
   activeHero: { alignItems: "center", borderWidth: StyleSheet.hairlineWidth, overflow: "hidden" },
   walkPill: { alignItems: "center", borderWidth: StyleSheet.hairlineWidth, flexDirection: "row" },
