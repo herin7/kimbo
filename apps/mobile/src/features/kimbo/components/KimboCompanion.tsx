@@ -2,7 +2,7 @@ import type { KimboMood } from "@kimbo/domain";
 import { Fit, RiveView, useRive, useRiveFile } from "@rive-app/react-native";
 import * as Haptics from "expo-haptics";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect } from "react";
 import { Platform, Pressable, StyleSheet, View } from "react-native";
 
 import moodAsset from "../../../../assets/rive/kimbo-mood.riv";
@@ -42,34 +42,32 @@ export function KimboCompanion({
   const { colors } = useKimboTheme();
   const { riveFile, error } = useRiveFile(riveSource);
   const { riveViewRef, setHybridRef } = useRive();
-  const [hasRuntimeError, setHasRuntimeError] = useState(false);
-  const moodTransition = useRef(0);
 
-  // Replays whenever the mood changes or a parent bumps `pulse`. A trigger that fails is not
-  // fatal (the idle blink keeps running); file/render failures arrive through RiveView.onError.
-  useEffect(() => {
+  // Rive's reset() always rejects on this (experimental) Android backend, so it must not gate the
+  // trigger or flip Kimbo to the fallback; a failed trigger just leaves the idle blink running.
+  const play = () => {
     if (!riveViewRef) return;
-    const transition = ++moodTransition.current;
-    void riveViewRef.reset().then(() => {
-      if (transition !== moodTransition.current) return;
+    try {
       if (mood !== "neutral") riveViewRef.triggerInput(moodTrigger[mood]);
       riveViewRef.playIfNeeded();
-    }).catch(() => setHasRuntimeError(true));
+    } catch {
+      // Non-fatal; see above.
+    }
+  };
+
+  useEffect(() => {
+    play();
+    // play reads the latest ref; re-run only when the mood, an explicit pulse or the view changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mood, pulse, riveViewRef]);
 
   const handlePress = () => {
     void Haptics.selectionAsync();
     if (onPress) return onPress();
-    if (!riveViewRef) return;
-    const transition = ++moodTransition.current;
-    void riveViewRef.reset().then(() => {
-      if (transition !== moodTransition.current) return;
-      if (mood !== "neutral") riveViewRef.triggerInput(moodTrigger[mood]);
-      riveViewRef.playIfNeeded();
-    }).catch(() => setHasRuntimeError(true));
+    play();
   };
 
-  const showFallback = Boolean(error) || hasRuntimeError || (framed && !riveFile);
+  const showFallback = Boolean(error) || (framed && !riveFile);
 
   return (
     <Pressable
@@ -101,7 +99,9 @@ export function KimboCompanion({
           file={riveFile}
           fit={Fit.Contain}
           hybridRef={setHybridRef}
-          onError={() => setHasRuntimeError(true)}
+          // Rive reports non-fatal warnings here too (e.g. "reset() is not supported on the experimental
+          // backend") while still rendering; only a missing file (useRiveFile error) shows the fallback.
+          onError={() => undefined}
           stateMachineName="State Machine 1"
           style={styles.rive}
         />
