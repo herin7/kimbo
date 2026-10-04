@@ -48,7 +48,7 @@ export function LoginScreen() {
         <KimboCompanion framed={false} mood="happy" size={104} />
         <View style={{ flex: 1, gap: spacing.xs }}>
           <Text color="brand" variant="caption">REVIEWER ACCESS</Text>
-          <Text variant="title">A week with Kimbo,<br />ready to explore.</Text>
+          <Text variant="title">{"A week with Kimbo,\nready to explore."}</Text>
           <Text color="secondary" variant="bodySmall">Choose a demo profile. Its credentials and real history are already loaded for you.</Text>
         </View>
       </View>
