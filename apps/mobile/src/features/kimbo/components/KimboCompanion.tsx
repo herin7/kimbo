@@ -1,7 +1,7 @@
 import type { KimboMood } from "@kimbo/domain";
 import { Fit, RiveView, useRive, useRiveFile } from "@rive-app/react-native";
 import * as Haptics from "expo-haptics";
-import { Sparkles } from "lucide-react-native";
+
 import { useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
@@ -88,7 +88,7 @@ export function KimboCompanion({
     >
       {showFallback ? (
         <View style={styles.fallback}>
-          <Sparkles color={colors.brand} size={size * 0.3} strokeWidth={2.1} />
+          <View style={{ backgroundColor: colors.brand, borderRadius: size, height: size * 0.62, width: size * 0.62 }} />
         </View>
       ) : !riveFile ? null : (
         <RiveView

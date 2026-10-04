@@ -1,6 +1,6 @@
 import * as Haptics from "expo-haptics";
 import Storage from "expo-sqlite/kv-store";
-import { Sparkles } from "lucide-react-native";
+import { KimboCompanion } from "@/features/kimbo/components/KimboCompanion";
 import { useEffect, useRef, useState } from "react";
 import { Modal, StyleSheet, View } from "react-native";
 
@@ -53,7 +53,7 @@ export function KimboModePermissionGate() {
       <View style={[styles.backdrop, { padding: spacing.lg }]}>
         <Card style={[styles.sheet, { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: radius.xl, gap: spacing.lg }]} variant="outlined">
           <View style={[styles.icon, { backgroundColor: colors.brandSoft, borderRadius: radius.pill }]}>
-            <Sparkles color={colors.brand} size={25} strokeWidth={2.2} />
+            <KimboCompanion framed={false} mood="happy" size={52} />
           </View>
           <View style={{ gap: spacing.sm }}>
             <Text variant="title">Keep Kimbo within reach</Text>

@@ -1,5 +1,5 @@
 import * as Haptics from "expo-haptics";
-import { Radio, Sparkles } from "lucide-react-native";
+import { Radio } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import Animated, {
@@ -123,7 +123,7 @@ export function LiveIslandControl() {
           {isReady ? (
             <KimboCompanion framed={false} mood={day?.reaction.mood ?? "neutral"} size={36} />
           ) : (
-            <Sparkles color={colors.activityIslandSecondary} size={20} strokeWidth={2.1} />
+            <View style={{ backgroundColor: colors.activityIslandSecondary, borderRadius: 10, height: 20, width: 20 }} />
           )}
         </Animated.View>
       </View>

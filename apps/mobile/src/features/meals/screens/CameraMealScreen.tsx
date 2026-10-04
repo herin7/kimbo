@@ -2,7 +2,7 @@ import { CameraView, useCameraPermissions } from "expo-camera";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
-import { ImageIcon, Sparkles, X } from "lucide-react-native";
+import { ImageIcon, Scan, X } from "lucide-react-native";
 import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Image, Linking, Pressable, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -117,7 +117,7 @@ export function CameraMealScreen() {
               <Text color="inverse" variant="heading">Reading your plate</Text>
               <Text color="inverse" style={styles.analysisDetail} variant="bodySmall">Finding foods and estimating portions…</Text>
             </View>
-            <Sparkles color={colors.activityIslandAccent} size={21} strokeWidth={2} />
+            <Scan color={colors.activityIslandAccent} size={21} strokeWidth={2} />
           </View>
         </SafeAreaView>
       </View>
@@ -163,7 +163,7 @@ export function CameraMealScreen() {
             <ScannerCorners color={colors.textInverse} />
           </View>
           <View style={[styles.holdStillPill, { backgroundColor: colors.activityIslandBackground, borderColor: colors.activityIslandBorder, borderRadius: radius.pill, marginTop: spacing.lg, paddingHorizontal: spacing.md, paddingVertical: spacing.sm }]}>
-            <Sparkles color={colors.activityIslandAccent} size={14} strokeWidth={2.2} />
+            <Scan color={colors.activityIslandAccent} size={14} strokeWidth={2.2} />
             <Text color="inverse" variant="caption">Kimbo will identify each item</Text>
           </View>
         </View>

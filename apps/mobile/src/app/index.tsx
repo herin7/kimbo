@@ -21,6 +21,7 @@ export default function BootstrapRoute() {
     );
   }
 
-  if (!auth.data) return <Redirect href={"/login" as Href} />;
+  // Signed-up users keep a local goal without an account; only show the welcome when neither exists.
+  if (!auth.data && !onboarding.data) return <Redirect href={"/login" as Href} />;
   return <Redirect href={onboarding.data ? "/today" : "/onboarding"} />;
 }
