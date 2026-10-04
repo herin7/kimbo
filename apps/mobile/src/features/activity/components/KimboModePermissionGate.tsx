@@ -50,7 +50,7 @@ export function KimboModePermissionGate() {
 
   return (
     <Modal animationType="fade" onRequestClose={() => setIsVisible(false)} transparent visible={isVisible && !hasPermission}>
-      <View style={[styles.backdrop, { padding: spacing.lg }]}> 
+      <View style={[styles.backdrop, { padding: spacing.lg }]}>
         <Card style={[styles.sheet, { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: radius.xl, gap: spacing.lg }]} variant="outlined">
           <View style={[styles.icon, { backgroundColor: colors.brandSoft, borderRadius: radius.pill }]}>
             <Sparkles color={colors.brand} size={25} strokeWidth={2.2} />

@@ -2,7 +2,7 @@ import type { KimboMood } from "@kimbo/domain";
 import { Fit, RiveView, useRive, useRiveFile } from "@rive-app/react-native";
 import * as Haptics from "expo-haptics";
 import { Sparkles } from "lucide-react-native";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import moodAsset from "../../../../assets/rive/kimbo-mood.riv";
@@ -39,29 +39,30 @@ export function KimboCompanion({
   const { riveFile, error } = useRiveFile(moodAsset);
   const { riveViewRef, setHybridRef } = useRive();
   const [hasRuntimeError, setHasRuntimeError] = useState(false);
+  const moodTransition = useRef(0);
 
   // Replays whenever the mood changes or a parent bumps `pulse`. A trigger that fails is not
   // fatal (the idle blink keeps running); file/render failures arrive through RiveView.onError.
   useEffect(() => {
-    if (!riveViewRef || mood === "neutral") return;
-    try {
-      riveViewRef.triggerInput(moodTrigger[mood]);
+    if (!riveViewRef) return;
+    const transition = ++moodTransition.current;
+    void riveViewRef.reset().then(() => {
+      if (transition !== moodTransition.current) return;
+      if (mood !== "neutral") riveViewRef.triggerInput(moodTrigger[mood]);
       riveViewRef.playIfNeeded();
-    } catch {
-      // Ignored on purpose; see above.
-    }
+    }).catch(() => setHasRuntimeError(true));
   }, [mood, pulse, riveViewRef]);
 
   const handlePress = () => {
     void Haptics.selectionAsync();
     if (onPress) return onPress();
     if (!riveViewRef) return;
-    try {
-      riveViewRef.triggerInput(moodTrigger[mood === "neutral" ? "happy" : mood]);
+    const transition = ++moodTransition.current;
+    void riveViewRef.reset().then(() => {
+      if (transition !== moodTransition.current) return;
+      if (mood !== "neutral") riveViewRef.triggerInput(moodTrigger[mood]);
       riveViewRef.playIfNeeded();
-    } catch {
-      setHasRuntimeError(true);
-    }
+    }).catch(() => setHasRuntimeError(true));
   };
 
   const showFallback = Boolean(error) || hasRuntimeError || (framed && !riveFile);

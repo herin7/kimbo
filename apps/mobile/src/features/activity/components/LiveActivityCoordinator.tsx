@@ -25,17 +25,12 @@ export function LiveActivityCoordinator() {
   const presentedSessionId = useRef<string | null>(null);
   const isHandlingAction = useRef(false);
 
-  // Kimbo Mode persists natively, but its island service does not survive a process restart.
-  // Re-assert it on launch and whenever the app returns (e.g. after granting display access).
+  // Android may revoke display access or stop the foreground service outside the app. Re-read the
+  // native runtime whenever Kimbo becomes active so the toggle reflects the visible island.
   useEffect(() => {
-    const sync = () => {
-      kimboMode.refresh();
-      const { hasPermission, isEnabled } = kimboMode.get();
-      if (isEnabled && hasPermission) kimboMode.setEnabled(true);
-    };
-    sync();
+    kimboMode.refresh();
     const subscription = AppState.addEventListener("change", (state) => {
-      if (state === "active") sync();
+      if (state === "active") kimboMode.refresh();
     });
     return () => subscription.remove();
   }, []);

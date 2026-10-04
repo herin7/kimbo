@@ -64,8 +64,8 @@ internal class SystemActivityIsland(private val context: Context) {
     .takeIf { it > 0 }
     ?.let(context.resources::getDimensionPixelSize)
     ?: dp(28)
-  private val compactWidth = dp(236)
-  private val compactHeight = dp(52)
+  private val compactWidth = dp(208)
+  private val compactHeight = dp(46)
   private val expandedWidth = min(context.resources.displayMetrics.widthPixels - dp(20), dp(372))
   private val fontMedium = font(R.font.kimbo_manrope_medium)
   private val fontSemiBold = font(R.font.kimbo_manrope_semibold)
@@ -218,7 +218,7 @@ internal class SystemActivityIsland(private val context: Context) {
       gravity = Gravity.CENTER_VERTICAL
       setPadding(dp(6), 0, dp(12), 0)
     }
-    row.addView(moodView(), LinearLayout.LayoutParams(dp(40), dp(40)))
+    row.addView(moodView(), LinearLayout.LayoutParams(dp(34), dp(34)))
     val copy = LinearLayout(context).apply {
       orientation = LinearLayout.VERTICAL
       setPadding(dp(8), 0, dp(8), 0)
@@ -228,7 +228,7 @@ internal class SystemActivityIsland(private val context: Context) {
     copy.addView(compactEyebrow)
     copy.addView(compactValue)
     row.addView(copy, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-    compactRing = RingView(context, dp(3.5f), TRACK).also { row.addView(it, LinearLayout.LayoutParams(dp(26), dp(26))) }
+    compactRing = RingView(context, dp(3.5f), TRACK).also { row.addView(it, LinearLayout.LayoutParams(dp(24), dp(24))) }
     installHeaderGestures(row)
     return row
   }

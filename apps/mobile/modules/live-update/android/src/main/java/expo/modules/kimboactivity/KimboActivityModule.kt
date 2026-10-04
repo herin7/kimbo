@@ -218,6 +218,10 @@ class KimboActivityModule : Module(), SensorEventListener {
       ActivityLiveService.isOverlayEnabled(context)
     }
 
+    Function("isOverlayRunning") {
+      ActivityLiveService.isRunning()
+    }
+
     Function("setOverlayEnabled") { isEnabled: Boolean ->
       ActivityLiveService.setOverlayEnabled(context, isEnabled)
     }

@@ -2,8 +2,9 @@ import { CameraView, useCameraPermissions } from "expo-camera";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
-import { useRef, useState } from "react";
-import { Image, Linking, Pressable, StyleSheet, View } from "react-native";
+import { ImageIcon, Sparkles, X } from "lucide-react-native";
+import { useEffect, useRef, useState } from "react";
+import { ActivityIndicator, Image, Linking, Pressable, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Button, PermissionFallback, Screen, Text, useKimboTheme } from "@/design-system";
@@ -23,10 +24,15 @@ export function CameraMealScreen() {
   const { colors, radius, spacing } = useKimboTheme();
   const camera = useRef<CameraView>(null);
   const [permission, requestPermission] = useCameraPermissions();
-  const [state, setState] = useState<CaptureState>(permission?.granted ? "camera" : "permission");
+  const [state, setState] = useState<CaptureState>("permission");
   const [previewUri, setPreviewUri] = useState<string>();
   const [errorMessage, setErrorMessage] = useState("");
+  const [isCapturing, setIsCapturing] = useState(false);
   const saveDraft = useSaveMealDraft();
+
+  useEffect(() => {
+    if (permission?.granted && state === "permission") setState("camera");
+  }, [permission?.granted, state]);
 
   const analyse = async (uri: string, mimeType: string) => {
     setPreviewUri(uri);
@@ -38,7 +44,7 @@ export function CameraMealScreen() {
     } catch (error) {
       setErrorMessage(error instanceof KimboApiError
         ? mapAppErrorToMessage(error.appError)
-        : "Kimbo couldn’t analyse that photo. Try another or describe the meal instead.");
+        : "Kimbo couldn't analyse that photo. Try another or describe the meal instead.");
       setState("error");
     }
   };
@@ -49,10 +55,19 @@ export function CameraMealScreen() {
   };
 
   const handleCapture = async () => {
-    const photo = await camera.current?.takePictureAsync({ quality: 0.72, skipProcessing: false });
-    if (!photo) return;
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    await analyse(photo.uri, photo.format === "png" ? "image/png" : "image/jpeg");
+    if (isCapturing) return;
+    setIsCapturing(true);
+    try {
+      const photo = await camera.current?.takePictureAsync({ quality: 0.72, skipProcessing: false });
+      if (!photo) return;
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      await analyse(photo.uri, photo.format === "png" ? "image/png" : "image/jpeg");
+    } catch {
+      setErrorMessage("The camera couldn't capture that photo. Try again or choose one from your gallery.");
+      setState("error");
+    } finally {
+      setIsCapturing(false);
+    }
   };
 
   const handleGallery = async () => {
@@ -68,7 +83,7 @@ export function CameraMealScreen() {
       <Screen>
         <View style={{ gap: spacing.sm }}>
           <Text variant="title">Scan your meal</Text>
-          <Text color="secondary">Kimbo uses the camera only to capture the meal you choose. You’ll review all detected foods before saving.</Text>
+          <Text color="secondary">Kimbo uses the camera only for the meal you choose. You'll review every detected food before it is saved.</Text>
         </View>
         <Button onPress={handlePermission}>Allow camera</Button>
         <Button onPress={handleGallery} variant="secondary">Choose from gallery</Button>
@@ -89,12 +104,21 @@ export function CameraMealScreen() {
   if (state === "analysing") {
     return (
       <View style={[styles.full, { backgroundColor: colors.background }]}>
-        {previewUri ? <Image accessibilityLabel="Captured meal" blurRadius={2} source={{ uri: previewUri }} style={StyleSheet.absoluteFill} /> : null}
+        {previewUri ? <Image accessibilityLabel="Captured meal" blurRadius={1} source={{ uri: previewUri }} style={StyleSheet.absoluteFill} /> : null}
         <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.scrim }]} />
-        <SafeAreaView style={styles.analysisContent}>
-          <View style={styles.analysisFrame}><ScanLine /></View>
-          <Text color="inverse" variant="title">Scanning meal…</Text>
-          <Text color="inverse" style={styles.centerText}>Looking for foods and estimating portions.</Text>
+        <SafeAreaView style={[styles.analysisContent, { gap: spacing.xl, padding: spacing.xl }]}>
+          <View style={[styles.analysisFrame, { borderColor: colors.textInverse, borderRadius: radius.xl }]}>
+            <ScanLine />
+            <ScannerCorners color={colors.textInverse} />
+          </View>
+          <View style={[styles.analysisStatus, { backgroundColor: colors.activityIslandBackground, borderColor: colors.activityIslandBorder, borderRadius: radius.xl, gap: spacing.md, padding: spacing.lg }]}>
+            <ActivityIndicator color={colors.activityIslandAccent} />
+            <View style={styles.analysisCopy}>
+              <Text color="inverse" variant="heading">Reading your plate</Text>
+              <Text color="inverse" style={styles.analysisDetail} variant="bodySmall">Finding foods and estimating portions…</Text>
+            </View>
+            <Sparkles color={colors.activityIslandAccent} size={21} strokeWidth={2} />
+          </View>
         </SafeAreaView>
       </View>
     );
@@ -103,7 +127,7 @@ export function CameraMealScreen() {
   if (state === "error") {
     return (
       <Screen>
-        <Text variant="title">We couldn’t identify that meal</Text>
+        <Text variant="title">We couldn't identify that meal</Text>
         <Text accessibilityRole="alert" color="secondary">{errorMessage}</Text>
         <Button onPress={() => { setPreviewUri(undefined); setState(permission?.granted ? "camera" : "permission"); }}>Try another photo</Button>
         <Button onPress={() => router.replace("/meal/manual")} variant="ghost">Enter manually</Button>
@@ -112,36 +136,101 @@ export function CameraMealScreen() {
   }
 
   return (
-    <View style={styles.full}>
+    <View style={[styles.full, { backgroundColor: colors.activityIslandBackground }]}>
       <CameraView facing="back" ref={camera} style={StyleSheet.absoluteFill} />
+      <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.cameraShade]} />
       <SafeAreaView edges={["top", "bottom"]} style={styles.cameraControls}>
-        <View style={[styles.cameraHeader, { padding: spacing.lg }]}>
-          <Button onPress={() => router.back()} size="sm" variant="secondary">Close</Button>
-          <Text color="inverse" variant="heading">Frame the whole meal</Text>
-        </View>
-        <View style={[styles.frame, { borderColor: colors.textInverse, borderRadius: radius.xl }]}><ScanLine /></View>
-        <View style={[styles.captureRow, { padding: spacing.xl }]}>
-          <Button onPress={handleGallery} size="sm" variant="secondary">Gallery</Button>
-          <Pressable accessibilityLabel="Capture meal photo" accessibilityRole="button" onPress={handleCapture} style={({ pressed }) => [styles.capture, { borderColor: colors.textInverse, opacity: pressed ? 0.7 : 1 }]}>
-            <View style={[styles.captureInner, { backgroundColor: colors.textInverse }]} />
+        <View style={[styles.cameraHeader, { paddingHorizontal: spacing.lg, paddingTop: spacing.sm }]}>
+          <Pressable
+            accessibilityLabel="Close camera"
+            accessibilityRole="button"
+            hitSlop={spacing.sm}
+            onPress={() => router.back()}
+            style={({ pressed }) => [styles.circleAction, { backgroundColor: colors.activityIslandBackground, borderColor: colors.activityIslandBorder, borderRadius: radius.pill, opacity: pressed ? 0.72 : 1 }]}
+          >
+            <X color={colors.activityIslandPrimary} size={21} strokeWidth={2.2} />
           </Pressable>
-          <View style={styles.balance} />
+          <View style={styles.headerCopy}>
+            <Text color="inverse" align="center" variant="heading">Scan your meal</Text>
+            <Text color="inverse" align="center" style={styles.headerHint} variant="caption">Keep the whole plate inside the frame</Text>
+          </View>
+          <View style={styles.headerBalance} />
+        </View>
+
+        <View style={styles.scannerStage}>
+          <View style={[styles.frame, { borderRadius: radius.xl }]}>
+            <ScanLine />
+            <ScannerCorners color={colors.textInverse} />
+          </View>
+          <View style={[styles.holdStillPill, { backgroundColor: colors.activityIslandBackground, borderColor: colors.activityIslandBorder, borderRadius: radius.pill, marginTop: spacing.lg, paddingHorizontal: spacing.md, paddingVertical: spacing.sm }]}>
+            <Sparkles color={colors.activityIslandAccent} size={14} strokeWidth={2.2} />
+            <Text color="inverse" variant="caption">Kimbo will identify each item</Text>
+          </View>
+        </View>
+
+        <View style={[styles.capturePanel, { backgroundColor: colors.activityIslandBackground, borderColor: colors.activityIslandBorder, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, paddingHorizontal: spacing.xl, paddingVertical: spacing.lg }]}>
+          <Pressable
+            accessibilityLabel="Choose meal from gallery"
+            accessibilityRole="button"
+            onPress={handleGallery}
+            style={({ pressed }) => [styles.galleryAction, { backgroundColor: colors.surfaceInteractive, borderRadius: radius.lg, opacity: pressed ? 0.72 : 1 }]}
+          >
+            <ImageIcon color={colors.activityIslandPrimary} size={22} strokeWidth={2} />
+            <Text color="inverse" variant="caption">Gallery</Text>
+          </Pressable>
+          <Pressable
+            accessibilityLabel="Capture meal photo"
+            accessibilityRole="button"
+            accessibilityState={{ busy: isCapturing, disabled: isCapturing }}
+            disabled={isCapturing}
+            onPress={handleCapture}
+            style={({ pressed }) => [styles.capture, { borderColor: colors.activityIslandPrimary, opacity: pressed || isCapturing ? 0.66 : 1 }]}
+          >
+            <View style={[styles.captureInner, { backgroundColor: colors.activityIslandAccent }]} />
+          </Pressable>
+          <View style={styles.captureBalance} />
         </View>
       </SafeAreaView>
     </View>
   );
 }
 
+function ScannerCorners({ color }: { color: string }) {
+  return (
+    <>
+      <View style={[styles.corner, styles.topLeft, { borderColor: color }]} />
+      <View style={[styles.corner, styles.topRight, { borderColor: color }]} />
+      <View style={[styles.corner, styles.bottomLeft, { borderColor: color }]} />
+      <View style={[styles.corner, styles.bottomRight, { borderColor: color }]} />
+    </>
+  );
+}
+
 const styles = StyleSheet.create({
   full: { flex: 1 },
+  cameraShade: { backgroundColor: "rgba(0, 0, 0, 0.14)" },
   cameraControls: { flex: 1, justifyContent: "space-between" },
-  cameraHeader: { alignItems: "center", flexDirection: "row", justifyContent: "space-between" },
-  frame: { alignSelf: "center", borderWidth: 2, height: 240, overflow: "hidden", width: "82%" },
-  captureRow: { alignItems: "center", flexDirection: "row", justifyContent: "space-between" },
-  capture: { alignItems: "center", borderRadius: 40, borderWidth: 4, height: 76, justifyContent: "center", width: 76 },
-  captureInner: { borderRadius: 32, height: 60, width: 60 },
-  balance: { width: 78 },
-  analysisContent: { alignItems: "center", flex: 1, justifyContent: "center", overflow: "hidden" },
-  analysisFrame: { height: 240, position: "absolute", width: "100%" },
-  centerText: { textAlign: "center" },
+  cameraHeader: { alignItems: "center", flexDirection: "row" },
+  circleAction: { alignItems: "center", borderWidth: StyleSheet.hairlineWidth, height: 48, justifyContent: "center", width: 48 },
+  headerCopy: { flex: 1 },
+  headerHint: { opacity: 0.78 },
+  headerBalance: { width: 48 },
+  scannerStage: { alignItems: "center", flex: 1, justifyContent: "center" },
+  frame: { aspectRatio: 1.08, maxWidth: 420, overflow: "hidden", position: "relative", width: "84%" },
+  corner: { height: 34, position: "absolute", width: 34 },
+  topLeft: { borderLeftWidth: 3, borderTopWidth: 3, left: 0, top: 0 },
+  topRight: { borderRightWidth: 3, borderTopWidth: 3, right: 0, top: 0 },
+  bottomLeft: { borderBottomWidth: 3, borderLeftWidth: 3, bottom: 0, left: 0 },
+  bottomRight: { borderBottomWidth: 3, borderRightWidth: 3, bottom: 0, right: 0 },
+  holdStillPill: { alignItems: "center", borderWidth: StyleSheet.hairlineWidth, flexDirection: "row", gap: 8 },
+  capturePanel: { alignItems: "center", borderTopWidth: StyleSheet.hairlineWidth, flexDirection: "row", justifyContent: "space-between" },
+  galleryAction: { alignItems: "center", height: 58, justifyContent: "center", width: 76 },
+  capture: { alignItems: "center", borderRadius: 44, borderWidth: 3, height: 80, justifyContent: "center", width: 80 },
+  captureInner: { borderRadius: 34, height: 64, width: 64 },
+  captureBalance: { width: 76 },
+  analysisContent: { alignItems: "center", flex: 1, justifyContent: "center" },
+  analysisFrame: { aspectRatio: 1.08, borderWidth: StyleSheet.hairlineWidth, maxWidth: 420, overflow: "hidden", position: "relative", width: "88%" },
+  analysisStatus: { alignItems: "center", borderWidth: StyleSheet.hairlineWidth, flexDirection: "row", maxWidth: 420, width: "100%" },
+  analysisCopy: { flex: 1 },
+  analysisDetail: { opacity: 0.72 },
 });

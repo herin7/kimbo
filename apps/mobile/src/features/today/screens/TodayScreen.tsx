@@ -159,14 +159,14 @@ export function TodayScreen() {
               <View style={[styles.mealIcon, { backgroundColor: colors.surfaceElevated, borderRadius: radius.md }]}>
                 <Utensils color={colors.textSecondary} size={18} strokeWidth={2} />
               </View>
-              <View style={[styles.flex, { gap: 2 }]}>
+              <View style={[styles.mealCopy, { gap: 2 }]}>
                 <Text numberOfLines={1} style={styles.strong} variant="bodySmall">{meal.items.map((item) => item.name).join(", ")}</Text>
-                <View style={[styles.row, { alignItems: "center", gap: spacing.sm }]}>
-                  <Text color="muted" variant="caption">{meal.mealType[0]?.toUpperCase()}{meal.mealType.slice(1)} · {Math.round(meal.totals.proteinGrams)} g protein</Text>
+                <View style={[styles.mealMeta, { gap: spacing.sm }]}>
+                  <Text color="muted" style={styles.mealMetaText} variant="caption">{meal.mealType[0]?.toUpperCase()}{meal.mealType.slice(1)} · {Math.round(meal.totals.proteinGrams)} g protein</Text>
                   <QualityChip quality={assessMealQuality(meal.totals)} />
                 </View>
               </View>
-              <Text variant="numericMedium">{Math.round(meal.totals.calories)}</Text>
+              <Text style={styles.mealCalories} variant="numericMedium">{Math.round(meal.totals.calories)}</Text>
             </View>
           ))}
         </View>
@@ -312,6 +312,10 @@ const styles = StyleSheet.create({
   actionIcon: { alignItems: "center", height: 48, justifyContent: "center", width: 48 },
   mealRow: { alignItems: "center", borderWidth: StyleSheet.hairlineWidth, flexDirection: "row" },
   mealIcon: { alignItems: "center", height: 40, justifyContent: "center", width: 40 },
+  mealCopy: { flex: 1, minWidth: 0 },
+  mealMeta: { alignItems: "center", flexDirection: "row", flexWrap: "wrap" },
+  mealMetaText: { flexShrink: 1 },
+  mealCalories: { flexShrink: 0, textAlign: "right" },
   chip: { borderWidth: 1, paddingHorizontal: 7, paddingVertical: 1 },
   chipText: { fontSize: 10, letterSpacing: 0.4, lineHeight: 14 },
   strong: { fontFamily: "Manrope_600SemiBold" },

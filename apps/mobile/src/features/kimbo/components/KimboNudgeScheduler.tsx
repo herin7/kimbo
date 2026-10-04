@@ -26,9 +26,9 @@ async function ensureReady() {
     });
   }
   const current = await Notifications.getPermissionsAsync();
-  if (current.granted) return true;
-  if (!current.canAskAgain) return false;
-  return (await Notifications.requestPermissionsAsync()).granted;
+  // Notification access is requested contextually when the user starts a live activity. A passive
+  // scheduler must never reopen a system permission prompt on launch.
+  return current.granted;
 }
 
 /**
