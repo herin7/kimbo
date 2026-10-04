@@ -3,10 +3,14 @@ import { Fit, RiveView, useRive, useRiveFile } from "@rive-app/react-native";
 import * as Haptics from "expo-haptics";
 
 import { useEffect, useRef, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Platform, Pressable, StyleSheet, View } from "react-native";
 
 import moodAsset from "../../../../assets/rive/kimbo-mood.riv";
 import { useKimboTheme } from "@/design-system";
+
+// Release builds pack a required .riv as a resource name Rive cannot open, so Android loads the copy
+// the native module ships in res/raw (kimbo_mood.riv, kept identical to assets/rive). Dev, release and OTA all work.
+const riveSource = Platform.OS === "android" ? "kimbo_mood" : moodAsset;
 
 /** State machine triggers in kimbo-mood.riv. Neutral plays the idle blink/look layers only. */
 const moodTrigger: Record<Exclude<KimboMood, "neutral">, "Happy" | "Sad" | "Angry" | "Crazy"> = {
@@ -36,7 +40,7 @@ export function KimboCompanion({
   size = 84,
 }: KimboCompanionProps) {
   const { colors } = useKimboTheme();
-  const { riveFile, error } = useRiveFile(moodAsset);
+  const { riveFile, error } = useRiveFile(riveSource);
   const { riveViewRef, setHybridRef } = useRive();
   const [hasRuntimeError, setHasRuntimeError] = useState(false);
   const moodTransition = useRef(0);
