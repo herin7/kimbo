@@ -65,13 +65,18 @@ export function useIslandMealLogging(day: KimboDay | null) {
       return;
     }
     const totals = sumNutrition(draft.items);
+    const today = latestDay.current;
+    const proteinLeft = today ? today.goal.dailyProteinTargetGrams - today.protein - totals.proteinGrams : 0;
+    const kimbo = reactToMeal(totals, Math.max(0, proteinLeft));
     await saveMeal.mutateAsync({
       ...draft,
       totals,
       syncStatus: "pending",
       timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     });
-    show({ phase: "saved", title: "Saved to today", detail: summary(totals.calories, totals.proteinGrams), line: "Logged! I'll keep count.", mood: "happy" });
+    // Keep the Island emotionally consistent with the review and the post-save day snapshot.
+    // A heavy or poor meal must not briefly turn Kimbo happy just because it was saved.
+    show({ phase: "saved", title: "Saved to today", detail: summary(totals.calories, totals.proteinGrams), line: kimbo.line, mood: kimbo.mood });
   }, [saveMeal]);
 
   const handleDiscard = useCallback(async () => {
