@@ -29,6 +29,9 @@ export function CameraMealScreen() {
   const [errorMessage, setErrorMessage] = useState("");
   const [isCapturing, setIsCapturing] = useState(false);
   const saveDraft = useSaveMealDraft();
+  // Camera surfaces sit over a live feed, so they stay light-on-dark in both themes.
+  const onCamera = { color: colors.activityIslandPrimary };
+  const centered = { flexGrow: 1, justifyContent: "center" as const };
 
   useEffect(() => {
     if (permission?.granted && state === "permission") setState("camera");
@@ -80,7 +83,7 @@ export function CameraMealScreen() {
 
   if (state === "permission") {
     return (
-      <Screen>
+      <Screen contentContainerStyle={centered}>
         <View style={{ gap: spacing.sm }}>
           <Text variant="title">Scan your meal</Text>
           <Text color="secondary">Kimbo uses the camera only for the meal you choose. You'll review every detected food before it is saved.</Text>
@@ -94,7 +97,7 @@ export function CameraMealScreen() {
 
   if (state === "denied") {
     return (
-      <Screen>
+      <Screen contentContainerStyle={centered}>
         <PermissionFallback description="Choose an existing photo or describe the meal. Meal logging still works without camera access." onPrimaryPress={() => void Linking.openSettings()} onSecondaryPress={handleGallery} primaryLabel="Open settings" secondaryLabel="Choose from gallery" title="Camera access is off" />
         <Button onPress={() => router.replace("/meal/manual")} variant="ghost">Describe meal instead</Button>
       </Screen>
@@ -107,15 +110,15 @@ export function CameraMealScreen() {
         {previewUri ? <Image accessibilityLabel="Captured meal" blurRadius={1} source={{ uri: previewUri }} style={StyleSheet.absoluteFill} /> : null}
         <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.scrim }]} />
         <SafeAreaView style={[styles.analysisContent, { gap: spacing.xl, padding: spacing.xl }]}>
-          <View style={[styles.analysisFrame, { borderColor: colors.textInverse, borderRadius: radius.xl }]}>
+          <View style={[styles.analysisFrame, { borderColor: colors.activityIslandPrimary, borderRadius: radius.xl }]}>
             <ScanLine />
-            <ScannerCorners color={colors.textInverse} />
+            <ScannerCorners color={colors.activityIslandPrimary} />
           </View>
           <View style={[styles.analysisStatus, { backgroundColor: colors.activityIslandBackground, borderColor: colors.activityIslandBorder, borderRadius: radius.xl, gap: spacing.md, padding: spacing.lg }]}>
             <ActivityIndicator color={colors.activityIslandAccent} />
             <View style={styles.analysisCopy}>
-              <Text color="inverse" variant="heading">Reading your plate</Text>
-              <Text color="inverse" style={styles.analysisDetail} variant="bodySmall">Finding foods and estimating portions…</Text>
+              <Text style={onCamera} variant="heading">Reading your plate</Text>
+              <Text style={[onCamera, styles.analysisDetail]} variant="bodySmall">Finding foods and estimating portions…</Text>
             </View>
             <Scan color={colors.activityIslandAccent} size={21} strokeWidth={2} />
           </View>
@@ -126,7 +129,7 @@ export function CameraMealScreen() {
 
   if (state === "error") {
     return (
-      <Screen>
+      <Screen contentContainerStyle={centered}>
         <Text variant="title">We couldn't identify that meal</Text>
         <Text accessibilityRole="alert" color="secondary">{errorMessage}</Text>
         <Button onPress={() => { setPreviewUri(undefined); setState(permission?.granted ? "camera" : "permission"); }}>Try another photo</Button>
@@ -151,8 +154,8 @@ export function CameraMealScreen() {
             <X color={colors.activityIslandPrimary} size={21} strokeWidth={2.2} />
           </Pressable>
           <View style={styles.headerCopy}>
-            <Text color="inverse" align="center" variant="heading">Scan your meal</Text>
-            <Text color="inverse" align="center" style={styles.headerHint} variant="caption">Keep the whole plate inside the frame</Text>
+            <Text style={onCamera} align="center" variant="heading">Scan your meal</Text>
+            <Text align="center" style={[onCamera, styles.headerHint]} variant="caption">Keep the whole plate inside the frame</Text>
           </View>
           <View style={styles.headerBalance} />
         </View>
@@ -160,11 +163,11 @@ export function CameraMealScreen() {
         <View style={styles.scannerStage}>
           <View style={[styles.frame, { borderRadius: radius.xl }]}>
             <ScanLine />
-            <ScannerCorners color={colors.textInverse} />
+            <ScannerCorners color={colors.activityIslandPrimary} />
           </View>
           <View style={[styles.holdStillPill, { backgroundColor: colors.activityIslandBackground, borderColor: colors.activityIslandBorder, borderRadius: radius.pill, marginTop: spacing.lg, paddingHorizontal: spacing.md, paddingVertical: spacing.sm }]}>
             <Scan color={colors.activityIslandAccent} size={14} strokeWidth={2.2} />
-            <Text color="inverse" variant="caption">Kimbo will identify each item</Text>
+            <Text style={onCamera} variant="caption">Kimbo will identify each item</Text>
           </View>
         </View>
 
@@ -173,10 +176,10 @@ export function CameraMealScreen() {
             accessibilityLabel="Choose meal from gallery"
             accessibilityRole="button"
             onPress={handleGallery}
-            style={({ pressed }) => [styles.galleryAction, { backgroundColor: colors.surfaceInteractive, borderRadius: radius.lg, opacity: pressed ? 0.72 : 1 }]}
+            style={({ pressed }) => [styles.galleryAction, { backgroundColor: colors.activityIslandBorder, borderRadius: radius.lg, opacity: pressed ? 0.72 : 1 }]}
           >
             <ImageIcon color={colors.activityIslandPrimary} size={22} strokeWidth={2} />
-            <Text color="inverse" variant="caption">Gallery</Text>
+            <Text style={onCamera} variant="caption">Gallery</Text>
           </Pressable>
           <Pressable
             accessibilityLabel="Capture meal photo"
