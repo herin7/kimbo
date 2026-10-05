@@ -2,8 +2,11 @@ name: CI
 
 on:
   pull_request:
+    paths-ignore: ["**.md", ".github/assets/**", "**.excalidraw"]
   push:
     branches: [main]
+    # Docs-only pushes (README, diagrams) don't need typecheck/test/build.
+    paths-ignore: ["**.md", ".github/assets/**", "**.excalidraw"]
 
 permissions:
   contents: read
