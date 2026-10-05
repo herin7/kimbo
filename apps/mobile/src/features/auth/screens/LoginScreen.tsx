@@ -140,7 +140,7 @@ export function LoginScreen() {
                   </View>
                   <View style={styles.accountCopy}>
                     <Text style={styles.strong} variant="bodySmall">{account.name}</Text>
-                    <Text color="muted" variant="caption">{account.goal} · 7 days of data</Text>
+                    <Text color="muted" variant="caption">{account.goal} · {account.daysLogged} days logged</Text>
                   </View>
                   <View style={[styles.radio, { borderColor: selected ? colors.brand : colors.border, borderRadius: radius.pill }]}>
                     {selected ? <View style={[styles.radioDot, { backgroundColor: colors.brand, borderRadius: radius.pill }]} /> : null}
