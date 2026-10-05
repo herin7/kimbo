@@ -2,13 +2,14 @@ import { assessMealQuality, calculateOverage, calculateRemaining, clampProgress,
 import { AudioLines, CalendarDays, ChevronRight, Footprints, PenLine, ScanLine, Utensils } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import { useEffect, useState, type ReactNode } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Pressable, RefreshControl, StyleSheet, View } from "react-native";
 import Animated, { FadeInDown, ReduceMotion, useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
 
 import { Card, ProgressBar, ProgressRing, Screen, SurfaceGradient, Text, useKimboTheme } from "@/design-system";
 import { LiveIslandControl } from "@/features/activity/components/LiveIslandControl";
 import { KimboSays } from "@/features/kimbo/components/KimboSays";
 import { useKimboDay } from "@/features/kimbo/hooks/useKimboDay";
+import { useRefreshAccount } from "@/features/auth/hooks/useAuth";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -30,6 +31,7 @@ export function TodayScreen() {
   const router = useRouter();
   const { colors, motion, radius, spacing } = useKimboTheme();
   const day = useKimboDay();
+  const refresh = useRefreshAccount();
   const [animateFill] = useState(() => !hasPlayedLaunchFill);
   useEffect(() => {
     hasPlayedLaunchFill = true;
@@ -54,7 +56,10 @@ export function TodayScreen() {
         : "On track";
 
   return (
-    <Screen contentContainerStyle={{ paddingBottom: spacing.huge * 2.5, paddingTop: spacing.huge + spacing.xxl }}>
+    <Screen
+      contentContainerStyle={{ paddingBottom: spacing.huge * 2.5, paddingTop: spacing.huge + spacing.xxl }}
+      refreshControl={<RefreshControl colors={[colors.brand]} onRefresh={() => refresh.mutate()} refreshing={refresh.isPending} tintColor={colors.brand} />}
+    >
       <View style={styles.header}>
         <View style={{ gap: spacing.xs }}>
           <Text color="secondary" variant="bodySmall">{getGreeting()}</Text>

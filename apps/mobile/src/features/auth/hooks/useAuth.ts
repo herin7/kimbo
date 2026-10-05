@@ -1,7 +1,7 @@
 import type { AuthSession, LoginRequest, LoginResponse } from "@kimbo/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { activeSessionQueryKey, activitySessionsQueryKey } from "@/features/activity/hooks/activity.queries";
+import { activeSessionQueryKey, activitySessionsQueryKey, todayStepsQueryKey } from "@/features/activity/hooks/activity.queries";
 import { activityRepository } from "@/features/activity/storage/activity.repository";
 import { mealsQueryKey } from "@/features/meals/hooks/meal.queries";
 import { mealRepository } from "@/features/meals/storage/meal.repository";
@@ -10,7 +10,7 @@ import { onboardingRepository } from "@/features/onboarding/storage/onboarding.r
 import { progressHistoryQueryKey, progressHistoryRepository } from "@/features/progress/storage/progress-history.repository";
 import { clearAuthSession, getAuthSession, saveAuthSession } from "@/shared/storage/identity.repository";
 
-import { login } from "../api/auth.api";
+import { fetchAccountSnapshot, login } from "../api/auth.api";
 
 export const authSessionQueryKey = ["auth-session"] as const;
 
@@ -41,6 +41,49 @@ export function useLogin() {
       queryClient.setQueryData(activitySessionsQueryKey, result.activitySessions);
       queryClient.setQueryData(progressHistoryQueryKey, result.dailySummaries);
       queryClient.setQueryData(activeSessionQueryKey, result.activitySessions.find((item) => item.state === "active") ?? null);
+    },
+  });
+}
+
+export function useRefreshAccount() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      if (!(await getAuthSession())) return null;
+      const snapshot = await fetchAccountSnapshot();
+      const [savedMeals, savedSessions] = await Promise.all([
+        mealRepository.getMeals(),
+        activityRepository.getSessions(),
+      ]);
+      const mealIds = new Set(snapshot.meals.map((meal) => meal.id));
+      const sessionIds = new Set(snapshot.activitySessions.map((session) => session.id));
+      const meals = [...snapshot.meals, ...savedMeals.filter((meal) => meal.syncStatus !== "synced" && !mealIds.has(meal.id))];
+      const activitySessions = [...snapshot.activitySessions, ...savedSessions.filter((session) => session.syncStatus !== "synced" && !sessionIds.has(session.id))];
+      await Promise.all([
+        onboardingRepository.saveHealthGoal(snapshot.goal),
+        mealRepository.replaceMeals(meals),
+        activityRepository.replaceSessions(activitySessions),
+        progressHistoryRepository.replaceSummaries(snapshot.dailySummaries),
+      ]);
+      return { ...snapshot, meals, activitySessions };
+    },
+    onSuccess: async (snapshot) => {
+      if (!snapshot) {
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: onboardingQueryKey }),
+          queryClient.invalidateQueries({ queryKey: mealsQueryKey }),
+          queryClient.invalidateQueries({ queryKey: activitySessionsQueryKey }),
+          queryClient.invalidateQueries({ queryKey: progressHistoryQueryKey }),
+          queryClient.invalidateQueries({ queryKey: todayStepsQueryKey }),
+        ]);
+        return;
+      }
+      queryClient.setQueryData(onboardingQueryKey, snapshot.goal);
+      queryClient.setQueryData(mealsQueryKey, snapshot.meals);
+      queryClient.setQueryData(activitySessionsQueryKey, snapshot.activitySessions);
+      queryClient.setQueryData(progressHistoryQueryKey, snapshot.dailySummaries);
+      queryClient.setQueryData(activeSessionQueryKey, snapshot.activitySessions.find((item) => item.state === "active") ?? null);
+      await queryClient.invalidateQueries({ queryKey: todayStepsQueryKey });
     },
   });
 }

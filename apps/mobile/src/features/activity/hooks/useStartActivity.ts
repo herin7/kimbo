@@ -11,11 +11,13 @@ import { useSaveActivitySession } from "./activity.queries";
 export function useStartActivity() {
   const saveSession = useSaveActivitySession();
 
-  const startActivity = async () => {
+  const startActivity = async (promptForMissingPermissions = true) => {
     if (saveSession.isPending) return false;
-    if (!(await activityProvider.ensureSensorPermission())) return false;
+    if (!(await activityProvider.hasSensorPermission())) {
+      if (!promptForMissingPermissions || !(await activityProvider.ensureSensorPermission())) return false;
+    }
     const notification = await resolveLiveActivityProvider();
-    if (!(await notification.hasPermission())) await notification.requestPermission();
+    if (promptForMissingPermissions && !(await notification.hasPermission())) await notification.requestPermission();
     await notification.preparePresentation();
     const current = await activityProvider.getTodaySteps();
     const session: ActivitySession = {

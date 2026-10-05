@@ -17,10 +17,14 @@ export class HealthConnectActivityProvider implements ActivityProvider {
     return await KimboActivityModule?.requestStepPermissions() ?? false;
   }
 
+  async hasSensorPermission() {
+    return KimboActivityModule?.hasActivityRecognitionPermission() ?? false;
+  }
+
   async ensureSensorPermission() {
     const module = KimboActivityModule;
     if (!module) return false;
-    if (!module.hasActivityRecognitionPermission()) {
+    if (!(await this.hasSensorPermission())) {
       await module.requestActivityRecognitionPermission();
     }
     return module.hasActivityRecognitionPermission();

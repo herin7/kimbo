@@ -388,22 +388,25 @@ internal class SystemActivityIsland(private val context: Context) {
 
   /** Starts the walk without leaving the current app when Kimbo is running in the background. */
   private fun startWalk() {
-    isStarting = true
-    configureActions()
-    root?.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
-    val delivered = KimboActivityModule.dispatchLiveActivityAction(context, "start")
-    if (!delivered) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
+      ContextCompat.checkSelfPermission(context, Manifest.permission.ACTIVITY_RECOGNITION) != PackageManager.PERMISSION_GRANTED
+    ) {
       openKimbo("activity")
       return
     }
-    // If nothing changed (e.g. a permission is missing), finish the job inside the app.
-    handler.postDelayed({
-      if (root != null && latestProgress?.isActivity != true) {
-        isStarting = false
-        configureActions()
-        openKimbo("activity")
-      }
-    }, 4_000L)
+    isStarting = true
+    configureActions()
+    root?.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
+    val snapshot = IslandSnapshot.load(context)
+    val now = System.currentTimeMillis()
+    val progress = ActivityProgress(snapshot.steps, snapshot.stepTarget, snapshot.steps, now, false)
+    if (runCatching { ActivityLiveService.start(context, progress) }.isFailure) {
+      openKimbo("activity")
+      return
+    }
+    // Start the native foreground service immediately so the walk survives RN suspension. The
+    // durable event lets React Native persist its local session when its JS runtime is available.
+    KimboActivityModule.dispatchLiveActivityAction(context, "start")
   }
 
   private fun confirmEnd() {

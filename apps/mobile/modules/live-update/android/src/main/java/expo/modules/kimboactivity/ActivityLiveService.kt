@@ -15,6 +15,10 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.provider.Settings
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.ServiceCompat
@@ -34,6 +38,7 @@ private const val EXTRA_PREFER_LIVE_UPDATE = "preferLiveUpdate"
 private const val EXTRA_IS_ACTIVITY = "isActivity"
 private const val ISLAND_PREFERENCES = "kimbo_island_preferences"
 private const val ISLAND_ENABLED_KEY = "island_enabled"
+private const val SERVICE_STATE_PREFERENCES = "kimbo_activity_service_state"
 
 internal data class ActivityProgress(
   val current: Int,
@@ -44,10 +49,15 @@ internal data class ActivityProgress(
   val isActivity: Boolean = true
 )
 
-class ActivityLiveService : Service() {
+class ActivityLiveService : Service(), SensorEventListener {
   private var island: SystemActivityIsland? = null
   private var latestProgress: ActivityProgress? = null
   private var isForeground = false
+  private var sensorManager: SensorManager? = null
+  private var stepSensorRegistered = false
+  private var sensorBaseline: Float? = null
+  private var sensorBaseSteps: Int? = null
+  private var sensorSessionStartedAt: Long? = null
   private val mainHandler = Handler(Looper.getMainLooper())
   private val elapsedTimeTicker = object : Runnable {
     override fun run() {
@@ -59,20 +69,28 @@ class ActivityLiveService : Service() {
   override fun onCreate() {
     super.onCreate()
     activeService = this
+    sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
   }
 
   override fun onBind(intent: Intent?): IBinder? = null
 
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-    val progress = intent?.toProgress() ?: return START_NOT_STICKY
+    val progress = intent?.toProgress() ?: restoreProgress() ?: return START_NOT_STICKY
+    if (sensorSessionStartedAt == null) restoreSensorBaseline()
+    if (sensorSessionStartedAt != progress.startedAtMillis) resetSensorBaseline(progress)
     latestProgress = progress
+    persistProgress(progress)
     present(progress)
     mainHandler.removeCallbacks(elapsedTimeTicker)
     mainHandler.postDelayed(elapsedTimeTicker, 30_000L)
-    return START_NOT_STICKY
+    // Keep the native foreground notification/island alive if Android reclaims the process.
+    // Explicit user stop clears the saved progress before stopping this service.
+    return START_STICKY
   }
 
   private fun present(progress: ActivityProgress) {
+    persistProgress(progress)
+    syncStepSensor(progress)
     val notification = createActivityNotification(this, progress)
     if (isForeground) {
       // Re-calling startForeground from the background with a while-in-use type would throw.
@@ -111,7 +129,8 @@ class ActivityLiveService : Service() {
     }
     try {
       ServiceCompat.startForeground(this, NOTIFICATION_ID, notification, withMicrophone)
-      canUseMicrophone = withMicrophone != types
+      canUseMicrophone = isGranted(Manifest.permission.RECORD_AUDIO) &&
+        (Build.VERSION.SDK_INT < Build.VERSION_CODES.R || withMicrophone != types)
     } catch (_: SecurityException) {
       ServiceCompat.startForeground(this, NOTIFICATION_ID, notification, types)
       canUseMicrophone = false
@@ -121,9 +140,93 @@ class ActivityLiveService : Service() {
   private fun isGranted(permission: String) =
     ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED
 
+  private fun syncStepSensor(progress: ActivityProgress) {
+    val manager = sensorManager ?: return
+    if (!progress.isActivity || !isGranted(Manifest.permission.ACTIVITY_RECOGNITION)) {
+      if (stepSensorRegistered) manager.unregisterListener(this)
+      stepSensorRegistered = false
+      return
+    }
+    if (stepSensorRegistered) return
+    val sensor = manager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER) ?: return
+    stepSensorRegistered = try {
+      manager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_NORMAL, mainHandler)
+    } catch (_: SecurityException) {
+      false
+    }
+  }
+
+  private fun resetSensorBaseline(progress: ActivityProgress) {
+    sensorSessionStartedAt = progress.startedAtMillis
+    sensorBaseline = null
+    sensorBaseSteps = progress.current
+    getSharedPreferences(SERVICE_STATE_PREFERENCES, Context.MODE_PRIVATE).edit()
+      .putLong("sensor_started_at", progress.startedAtMillis)
+      .remove("sensor_baseline")
+      .putInt("sensor_base_steps", progress.current)
+      .apply()
+  }
+
+  private fun restoreSensorBaseline() {
+    val prefs = getSharedPreferences(SERVICE_STATE_PREFERENCES, Context.MODE_PRIVATE)
+    val startedAt = prefs.getLong("sensor_started_at", 0L)
+    if (startedAt <= 0L) return
+    sensorSessionStartedAt = startedAt
+    sensorBaseline = if (prefs.contains("sensor_baseline")) prefs.getFloat("sensor_baseline", 0f) else null
+    sensorBaseSteps = if (prefs.contains("sensor_base_steps")) prefs.getInt("sensor_base_steps", 0) else null
+  }
+
+  override fun onSensorChanged(event: SensorEvent) {
+    val progress = latestProgress ?: return
+    if (!progress.isActivity || event.sensor.type != Sensor.TYPE_STEP_COUNTER) return
+    val baseline = sensorBaseline
+    if (baseline == null || event.values[0] < baseline) {
+      sensorBaseline = event.values[0]
+      sensorBaseSteps = progress.current
+      getSharedPreferences(SERVICE_STATE_PREFERENCES, Context.MODE_PRIVATE).edit()
+        .putLong("sensor_started_at", progress.startedAtMillis)
+        .putFloat("sensor_baseline", event.values[0])
+        .putInt("sensor_base_steps", progress.current)
+        .apply()
+      return
+    }
+    val current = max(progress.current, (sensorBaseSteps ?: progress.startingSteps) + (event.values[0] - baseline).toInt())
+    if (current > progress.current) present(progress.copy(current = current))
+  }
+
+  override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
+
+  private fun restoreProgress(): ActivityProgress? {
+    val prefs = getSharedPreferences(SERVICE_STATE_PREFERENCES, Context.MODE_PRIVATE)
+    if (!prefs.getBoolean("present", false)) return null
+    return ActivityProgress(
+      current = max(0, prefs.getInt(EXTRA_CURRENT, 0)),
+      target = max(1, prefs.getInt(EXTRA_TARGET, 8_000)),
+      startingSteps = max(0, prefs.getInt(EXTRA_STARTING_STEPS, 0)),
+      startedAtMillis = prefs.getLong(EXTRA_STARTED_AT, System.currentTimeMillis()),
+      preferLiveUpdate = prefs.getBoolean(EXTRA_PREFER_LIVE_UPDATE, false),
+      isActivity = prefs.getBoolean(EXTRA_IS_ACTIVITY, false)
+    )
+  }
+
+  private fun persistProgress(progress: ActivityProgress) {
+    getSharedPreferences(SERVICE_STATE_PREFERENCES, Context.MODE_PRIVATE).edit()
+      .putBoolean("present", true)
+      .putInt(EXTRA_CURRENT, progress.current)
+      .putInt(EXTRA_TARGET, progress.target)
+      .putInt(EXTRA_STARTING_STEPS, progress.startingSteps)
+      .putLong(EXTRA_STARTED_AT, progress.startedAtMillis)
+      .putBoolean(EXTRA_PREFER_LIVE_UPDATE, progress.preferLiveUpdate)
+      .putBoolean(EXTRA_IS_ACTIVITY, progress.isActivity)
+      .apply()
+  }
+
   override fun onDestroy() {
     activeService = null
+    canUseMicrophone = false
     mainHandler.removeCallbacks(elapsedTimeTicker)
+    sensorManager?.unregisterListener(this)
+    stepSensorRegistered = false
     latestProgress = null
     island?.remove()
     island = null
@@ -194,6 +297,7 @@ class ActivityLiveService : Service() {
       if (isOverlayEnabled(context) && Settings.canDrawOverlays(context)) {
         update(context, idleProgress())
       } else {
+        context.getSharedPreferences(SERVICE_STATE_PREFERENCES, Context.MODE_PRIVATE).edit().clear().apply()
         context.stopService(Intent(context, ActivityLiveService::class.java))
         NotificationManagerCompat.from(context).cancel(NOTIFICATION_ID)
       }
@@ -201,6 +305,14 @@ class ActivityLiveService : Service() {
 
     private fun startMode(context: Context) =
       ContextCompat.startForegroundService(context, serviceIntent(context, ACTION_START, idleProgress()))
+
+    /** Upgrade the already-running foreground service after the user grants mic access in-app. */
+    internal fun enableMicrophoneFromForeground(context: Context): Boolean {
+      if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) return false
+      val service = activeService ?: return true // A later service start will include the granted mic type.
+      service.mainHandler.post { service.upgradeMicrophoneType() }
+      return true
+    }
 
     private fun idleProgress() =
       ActivityProgress(0, 8_000, 0, System.currentTimeMillis(), false, false)
@@ -214,6 +326,26 @@ class ActivityLiveService : Service() {
         .putExtra(EXTRA_STARTED_AT, progress.startedAtMillis)
         .putExtra(EXTRA_PREFER_LIVE_UPDATE, progress.preferLiveUpdate)
         .putExtra(EXTRA_IS_ACTIVITY, progress.isActivity)
+  }
+
+  private fun upgradeMicrophoneType() {
+    if (canUseMicrophone || !isForeground || !isGranted(Manifest.permission.RECORD_AUDIO)) return
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+      canUseMicrophone = true
+      return
+    }
+    var types = ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+      types = types or ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+      if (isGranted(Manifest.permission.ACTIVITY_RECOGNITION)) types = types or ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH
+    }
+    try {
+    val notification = latestProgress?.let { createActivityNotification(this, it) } ?: return
+      ServiceCompat.startForeground(this, NOTIFICATION_ID, notification, types)
+      canUseMicrophone = true
+    } catch (_: SecurityException) {
+      canUseMicrophone = false
+    }
   }
 }
 

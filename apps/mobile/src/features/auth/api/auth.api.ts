@@ -1,4 +1,4 @@
-import { LoginResponseSchema, type LoginRequest } from "@kimbo/contracts";
+import { AuthSnapshotSchema, LoginResponseSchema, type LoginRequest } from "@kimbo/contracts";
 
 import { apiRequest } from "@/shared/api/api-client";
 
@@ -8,4 +8,8 @@ export function login(input: LoginRequest) {
     headers: { "content-type": "application/json" },
     body: JSON.stringify(input),
   });
+}
+
+export function fetchAccountSnapshot() {
+  return apiRequest("/v1/auth/snapshot", AuthSnapshotSchema);
 }

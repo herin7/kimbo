@@ -104,7 +104,7 @@ export function LiveActivityCoordinator() {
     isHandlingAction.current = true;
     try {
       if (action === "end" && current.session) await current.endActivity(current.session, current.steps);
-      if (action === "start" && !current.session) await current.startActivity();
+      if (action === "start" && !current.session) await current.startActivity(false);
       KimboActivityModule?.consumePendingLiveActivityAction();
     } finally {
       isHandlingAction.current = false;

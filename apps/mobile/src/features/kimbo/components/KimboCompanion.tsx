@@ -43,28 +43,35 @@ export function KimboCompanion({
   const { riveFile, error } = useRiveFile(riveSource);
   const { riveViewRef, setHybridRef } = useRive();
 
-  // Rive's reset() always rejects on this (experimental) Android backend, so it must not gate the
-  // trigger or flip Kimbo to the fallback; a failed trigger just leaves the idle blink running.
-  const play = () => {
-    if (!riveViewRef) return;
-    try {
-      if (mood !== "neutral") riveViewRef.triggerInput(moodTrigger[mood]);
-      riveViewRef.playIfNeeded();
-    } catch {
-      // Non-fatal; see above.
-    }
-  };
-
   useEffect(() => {
-    play();
-    // play reads the latest ref; re-run only when the mood, an explicit pulse or the view changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (!riveViewRef) return;
+    let cancelled = false;
+    void riveViewRef.awaitViewReady().then((ready) => {
+      if (!ready || cancelled) return;
+      try {
+        if (mood !== "neutral") riveViewRef.triggerInput(moodTrigger[mood]);
+        riveViewRef.playIfNeeded();
+      } catch {
+        // Native runtime may reject a trigger if the view was detached during a transition.
+      }
+    }).catch(() => undefined);
+    return () => { cancelled = true; };
   }, [mood, pulse, riveViewRef]);
 
   const handlePress = () => {
     void Haptics.selectionAsync();
     if (onPress) return onPress();
-    play();
+    if (riveViewRef) {
+      void riveViewRef.awaitViewReady().then((ready) => {
+        if (!ready) return;
+        try {
+          if (mood !== "neutral") riveViewRef.triggerInput(moodTrigger[mood]);
+          riveViewRef.playIfNeeded();
+        } catch {
+          // The rendered view can be detached while navigating away.
+        }
+      }).catch(() => undefined);
+    }
   };
 
   const showFallback = Boolean(error) || (framed && !riveFile);

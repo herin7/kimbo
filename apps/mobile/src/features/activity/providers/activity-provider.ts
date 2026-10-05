@@ -9,6 +9,7 @@ class UnavailableActivityProvider implements ActivityProvider {
   getAvailability() { return "unavailable" as const; }
   async hasPermission() { return false; }
   async requestPermission() { return false; }
+  async hasSensorPermission() { return false; }
   async ensureSensorPermission() { return false; }
   async getTodaySteps() { return 0; }
   subscribeToSteps() { return () => undefined; }

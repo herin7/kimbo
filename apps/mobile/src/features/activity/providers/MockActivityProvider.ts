@@ -7,6 +7,7 @@ export class MockActivityProvider implements ActivityProvider {
   getAvailability() { return "available" as const; }
   async hasPermission() { return true; }
   async requestPermission() { return true; }
+  async hasSensorPermission() { return true; }
   async ensureSensorPermission() { return true; }
   async getTodaySteps() { return this.steps; }
 

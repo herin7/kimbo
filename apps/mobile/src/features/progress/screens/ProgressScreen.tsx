@@ -1,13 +1,14 @@
 import { reactToWeek } from "@kimbo/domain";
 import { CalendarDays, Flame } from "lucide-react-native";
 import { useMemo, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Pressable, RefreshControl, StyleSheet, View } from "react-native";
 
 import { Card, ProgressBar, Screen, Text, useKimboTheme } from "@/design-system";
 import { KimboSays } from "@/features/kimbo/components/KimboSays";
 
 import { buildProgressOverview, type ProgressDay, type ProgressRange } from "../domain/build-progress-overview";
 import { useProgressHistory } from "../hooks/useProgressHistory";
+import { useRefreshAccount } from "@/features/auth/hooks/useAuth";
 
 const rangeDate = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", year: "numeric" });
 const ranges: readonly { value: ProgressRange; label: string }[] = [
@@ -19,11 +20,12 @@ const ranges: readonly { value: ProgressRange; label: string }[] = [
 export function ProgressScreen() {
   const { colors, radius, spacing } = useKimboTheme();
   const { data, isLoading } = useProgressHistory();
+  const refresh = useRefreshAccount();
   const [range, setRange] = useState<ProgressRange>("1Y");
   const overview = useMemo(() => data ? buildProgressOverview(data, range) : null, [data, range]);
 
   if (isLoading || !overview) {
-    return <Screen contentContainerStyle={{ paddingTop: spacing.huge + spacing.xxl }}><Text color="secondary">Reading your progress...</Text></Screen>;
+    return <Screen contentContainerStyle={{ paddingTop: spacing.huge + spacing.xxl }} refreshControl={<RefreshControl colors={[colors.brand]} onRefresh={() => refresh.mutate()} refreshing={refresh.isPending} tintColor={colors.brand} />}><Text color="secondary">Reading your progress...</Text></Screen>;
   }
 
   const first = new Date(`${overview.days[0]?.date}T00:00:00`);
@@ -37,7 +39,7 @@ export function ProgressScreen() {
   });
 
   return (
-    <Screen contentContainerStyle={{ paddingBottom: spacing.huge * 2, paddingTop: spacing.huge + spacing.xxl }}>
+    <Screen contentContainerStyle={{ paddingBottom: spacing.huge * 2, paddingTop: spacing.huge + spacing.xxl }} refreshControl={<RefreshControl colors={[colors.brand]} onRefresh={() => refresh.mutate()} refreshing={refresh.isPending} tintColor={colors.brand} />}>
       <View style={[styles.header, { gap: spacing.md }]}>
         <View style={[styles.calendarIcon, { backgroundColor: colors.brandSoft, borderRadius: radius.lg }]}>
           <CalendarDays color={colors.brand} size={23} strokeWidth={2} />

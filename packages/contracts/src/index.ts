@@ -204,6 +204,9 @@ export const LoginResponseSchema = AuthSessionSchema.extend({
 });
 export type LoginResponse = z.infer<typeof LoginResponseSchema>;
 
+export const AuthSnapshotSchema = LoginResponseSchema.omit({ token: true });
+export type AuthSnapshot = z.infer<typeof AuthSnapshotSchema>;
+
 export const InsightFactsSchema = z.object({
   daysWithData: z.number().int().min(0).max(7),
   daysWithinCalorieGoal: z.number().int().min(0).max(7),

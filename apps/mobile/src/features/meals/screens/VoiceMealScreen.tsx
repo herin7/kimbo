@@ -6,6 +6,7 @@ import { Linking, StyleSheet, View } from "react-native";
 import { Button, Card, PermissionFallback, Screen, Text, useKimboTheme } from "@/design-system";
 import { KimboApiError } from "@/shared/api/api-client";
 import { mapAppErrorToMessage } from "@/shared/errors/AppError";
+import KimboActivityModule from "../../../../modules/live-update";
 
 import { analyseTextMeal, transcribeMeal } from "../api/meal.api";
 import { ListeningPulse } from "../components/ListeningPulse";
@@ -52,6 +53,9 @@ export function VoiceMealScreen() {
         setState("denied");
         return;
       }
+      // Upgrade the active island service while the app is visible. Android won't allow a
+      // background-started service to acquire microphone access later on its own.
+      KimboActivityModule?.enableIslandMicrophone();
       await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
       await recorder.prepareToRecordAsync();
       recorder.record({ forDuration: 60 });

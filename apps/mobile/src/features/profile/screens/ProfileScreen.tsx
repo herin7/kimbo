@@ -21,7 +21,12 @@ export function ProfileScreen() {
     router.replace("/login" as Href);
   };
 
-  if (!session || !goal) return null;
+  if (!goal) {
+    return <Screen contentContainerStyle={{ paddingTop: spacing.huge + spacing.xxl }}>
+      <Text color="secondary">Your profile will appear after you finish setting up your plan.</Text>
+      <Button onPress={() => router.replace("/onboarding" as Href)}>Set up my plan</Button>
+    </Screen>;
+  }
 
   return (
     <Screen contentContainerStyle={{ paddingBottom: spacing.huge * 2.5, paddingTop: spacing.huge + spacing.xxl }}>
@@ -36,10 +41,10 @@ export function ProfileScreen() {
           <UserRound color={colors.brand} size={32} strokeWidth={2} />
         </View>
         <View style={styles.identityCopy}>
-          <Text variant="heading">{session.user.name}</Text>
+          <Text variant="heading">{session?.user.name ?? "Your profile"}</Text>
           <View style={[styles.inline, { gap: spacing.xs }]}>
             <Mail color={colors.textMuted} size={14} />
-            <Text color="muted" variant="caption">{session.user.email}</Text>
+            <Text color="muted" variant="caption">{session?.user.email ?? "Your plan is saved on this device"}</Text>
           </View>
         </View>
       </Card>
@@ -64,7 +69,9 @@ export function ProfileScreen() {
       </Card>
 
       <Text color="muted" variant="caption">Targets are estimates for planning, not medical advice.</Text>
-      <Button leftIcon={<LogOut color={colors.danger} size={19} />} loading={logout.isPending} onPress={() => void handleLogout()} variant="ghost">Switch demo account</Button>
+      {session ? (
+        <Button leftIcon={<LogOut color={colors.danger} size={19} />} loading={logout.isPending} onPress={() => void handleLogout()} variant="ghost">Sign out</Button>
+      ) : null}
     </Screen>
   );
 }

@@ -234,6 +234,10 @@ class KimboActivityModule : Module(), SensorEventListener {
       ActivityLiveService.updateMeal(input.toMeal())
     }
 
+    Function("enableIslandMicrophone") {
+      ActivityLiveService.enableMicrophoneFromForeground(context)
+    }
+
     Function("consumePendingLiveActivityAction") {
       val preferences = context.getSharedPreferences(ACTION_PREFERENCES, Context.MODE_PRIVATE)
       val action = preferences.getString(PENDING_ACTION_KEY, null) ?: return@Function null

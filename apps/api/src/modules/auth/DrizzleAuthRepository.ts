@@ -1,5 +1,5 @@
 import { randomBytes, createHash } from "node:crypto";
-import type { ActivitySession, ConfirmedMeal, DailyHealthSummary, HealthGoal, LoginRequest, LoginResponse, UserProfile } from "@kimbo/contracts";
+import type { ActivitySession, AuthSnapshot, ConfirmedMeal, DailyHealthSummary, HealthGoal, LoginRequest, LoginResponse, UserProfile } from "@kimbo/contracts";
 import { and, eq, gt } from "drizzle-orm";
 
 import type { Database } from "../../db/database.js";
@@ -101,5 +101,50 @@ export class DrizzleAuthRepository implements AuthRepository {
       gt(authSessions.expiresAt, new Date()),
     )).limit(1);
     return session?.userId ?? null;
+  }
+
+  async snapshot(userId: string): Promise<AuthSnapshot> {
+    const [row] = await this.db.select().from(users).where(eq(users.id, userId)).limit(1);
+    const [goalRow] = await this.db.select().from(healthGoals).where(eq(healthGoals.userId, userId)).limit(1);
+    if (!row?.name || !row.email || !goalRow) throw new AppError("NOT_FOUND", "Account data is unavailable", 404, false);
+
+    const mealRows = await this.db.select().from(meals).where(eq(meals.userId, userId));
+    const itemRows = mealRows.length === 0
+      ? []
+      : (await Promise.all(mealRows.map((meal) => this.db.select().from(mealItems).where(eq(mealItems.mealId, meal.id))))).flat();
+    const sessionRows = await this.db.select().from(activitySessions).where(eq(activitySessions.userId, userId));
+    const summaryRows = await this.db.select().from(dailyHealthSummaries).where(eq(dailyHealthSummaries.userId, userId));
+
+    const user: UserProfile = { id: row.id, name: row.name, email: row.email, createdAt: row.createdAt.toISOString() };
+    const goal: HealthGoal = {
+      goalType: goalRow.goalType, currentWeightKg: goalRow.currentWeightKg, targetWeightKg: goalRow.targetWeightKg,
+      heightCm: goalRow.heightCm, ageYears: goalRow.ageYears, activityLevel: goalRow.activityLevel,
+      dailyCalorieTarget: goalRow.dailyCalorieTarget, dailyProteinTargetGrams: goalRow.dailyProteinTargetGrams,
+      dailyStepTarget: goalRow.dailyStepTarget, timeZone: goalRow.timeZone, updatedAt: goalRow.updatedAt.toISOString(),
+    };
+    const confirmedMeals: ConfirmedMeal[] = mealRows.map((meal) => ({
+      id: meal.id, mealType: meal.mealType, source: meal.source, occurredAt: meal.occurredAt.toISOString(),
+      timeZone: meal.timeZone, syncStatus: "synced",
+      totals: { calories: meal.totalCalories, proteinGrams: meal.totalProteinGrams, carbsGrams: meal.totalCarbsGrams, fatGrams: meal.totalFatGrams },
+      items: itemRows.filter((item) => item.mealId === meal.id).map((item) => ({
+        id: item.id, name: item.name,
+        portion: { amount: item.portionAmount, unit: item.portionUnit, displayText: item.portionDisplayText },
+        nutrition: { calories: item.calories, proteinGrams: item.proteinGrams, carbsGrams: item.carbsGrams, fatGrams: item.fatGrams },
+        confidence: item.confidence,
+      })),
+    }));
+    const activities: ActivitySession[] = sessionRows.map((session) => ({
+      id: session.id, type: "walking", state: session.state, startedAt: session.startedAt.toISOString(),
+      endedAt: session.endedAt?.toISOString() ?? null, startingSteps: session.startingSteps,
+      currentSteps: session.currentSteps, endingSteps: session.endingSteps,
+      estimatedDistanceMeters: session.estimatedDistanceMeters, syncStatus: "synced",
+    }));
+    const dailySummaries: DailyHealthSummary[] = summaryRows.map((summary) => ({
+      date: summary.date, calories: summary.calories, calorieTarget: goal.dailyCalorieTarget,
+      proteinGrams: summary.proteinGrams, proteinTargetGrams: goal.dailyProteinTargetGrams,
+      steps: summary.steps, stepTarget: goal.dailyStepTarget, hasMealData: summary.hasMealData,
+      hasActivityData: summary.hasActivityData,
+    }));
+    return { user, goal, meals: confirmedMeals, activitySessions: activities, dailySummaries };
   }
 }
