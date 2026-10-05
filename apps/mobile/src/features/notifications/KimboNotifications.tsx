@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AppState, Platform } from "react-native";
 
 import { useAuthSession } from "@/features/auth/hooks/useAuth";
-import { useMeals } from "@/features/meals/hooks/meal.queries";
 import { useOnboardingStatus } from "@/features/onboarding";
 import { useProgressHistory } from "@/features/progress/hooks/useProgressHistory";
 import { localClock } from "@kimbo/domain";
@@ -45,40 +44,25 @@ const routeFrom = (value: unknown) => {
 export function KimboNotifications() {
   const router = useRouter();
   const { data: auth } = useAuthSession();
-  const mealsQuery = useMeals();
-  const meals = mealsQuery.data ?? [];
   const { data: goal } = useOnboardingStatus();
   const { data: history } = useProgressHistory();
-  const initialMealCount = useRef<number | null>(null);
   const handledResponse = useRef<string | null>(null);
   const lastSummarySync = useRef(0);
   const [foregroundTick, setForegroundTick] = useState(0);
 
   useEffect(() => { void configureNotifications(); }, []);
 
+  // Ask once, right after onboarding/sign-in, so the first coaching nudge can actually arrive.
+  // Android only shows the prompt while the status is still undetermined; later launches re-register.
   useEffect(() => {
-    if (!auth) return;
-    void getGrantedExpoPushToken().then((token) => token ? registerPushToken(token) : undefined).catch(() => undefined);
-  }, [auth]);
-
-  useEffect(() => {
-    if (mealsQuery.isLoading) return;
-    if (initialMealCount.current === null) {
-      initialMealCount.current = meals.length;
-      return;
-    }
-    const previous = initialMealCount.current;
-    initialMealCount.current = meals.length;
-    if (previous !== 0 || meals.length === 0) return;
+    if (!auth || !goal) return;
     void (async () => {
       const current = await Notifications.getPermissionsAsync();
-      if (current.status !== "undetermined") return;
-      const requested = await Notifications.requestPermissionsAsync();
-      if (!requested.granted) return;
+      if (current.status === "undetermined") await Notifications.requestPermissionsAsync();
       const token = await getGrantedExpoPushToken();
       if (token) await registerPushToken(token);
     })().catch(() => undefined);
-  }, [meals.length, mealsQuery.isLoading]);
+  }, [auth, goal]);
 
   useEffect(() => {
     const open = (response: Notifications.NotificationResponse | null) => {
