@@ -57,6 +57,7 @@ export function useKimboDay(): KimboDay | null {
       steps,
       stepTarget: goal.dailyStepTarget,
       isWalking: Boolean(session),
+      walkingStartedAt: session?.startedAt ?? null,
     };
     return {
       goal,

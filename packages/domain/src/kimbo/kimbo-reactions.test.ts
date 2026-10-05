@@ -44,6 +44,26 @@ describe("deriveKimboReaction", () => {
     expect(reaction.line).toContain("92 g");
   });
 
+  it("reacts to whichever happened last: starting a walk or logging a meal", () => {
+    const now = new Date(2026, 9, 4, 21, 0);
+    const junk = meal(0.1, now, { calories: 900, proteinGrams: 8, fatGrams: 55 });
+    const walkingAfterMeal = deriveKimboReaction(day({
+      now,
+      meals: [junk],
+      isWalking: true,
+      walkingStartedAt: new Date(now.getTime() - 30_000).toISOString(),
+    }));
+    expect(walkingAfterMeal).toMatchObject({ mood: "playful", topic: "walk" });
+
+    const mealAfterWalking = deriveKimboReaction(day({
+      now,
+      meals: [meal(0.01, now, { calories: 900, proteinGrams: 8, fatGrams: 55 })],
+      isWalking: true,
+      walkingStartedAt: new Date(now.getTime() - 5 * 60_000).toISOString(),
+    }));
+    expect(mealAfterWalking).toMatchObject({ mood: "angry", topic: "meal" });
+  });
+
   it("is happy about a protein-packed meal", () => {
     const now = new Date(2026, 9, 4, 13, 0);
     expect(deriveKimboReaction(day({ now, meals: [meal(0.05, now, { calories: 450, proteinGrams: 40, fatGrams: 12 })] })).mood).toBe("happy");

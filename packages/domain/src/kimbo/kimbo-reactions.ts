@@ -20,6 +20,8 @@ export interface KimboDayInput {
   steps: number;
   stepTarget: number;
   isWalking: boolean;
+  /** Start time lets a newly started walk take precedence over an older recent meal. */
+  walkingStartedAt?: string | null;
 }
 
 export interface KimboNudge {
@@ -106,8 +108,17 @@ export function deriveKimboReaction(input: KimboDayInput): KimboReaction {
   const day = totalsFor(input);
   const hour = input.now.getHours();
   const latestMeal = [...input.meals].sort((a, b) => b.occurredAt.localeCompare(a.occurredAt))[0];
+  const latestMealAt = latestMeal ? new Date(latestMeal.occurredAt).getTime() : Number.NEGATIVE_INFINITY;
+  const walkingStartedAt = input.walkingStartedAt ? new Date(input.walkingStartedAt).getTime() : Number.POSITIVE_INFINITY;
+  const walkIsLatestAction = input.isWalking && walkingStartedAt >= latestMealAt;
 
-  if (latestMeal && input.now.getTime() - new Date(latestMeal.occurredAt).getTime() <= RECENT_MEAL_MS) {
+  if (walkIsLatestAction) {
+    return day.stepsLeft === 0
+      ? { mood: "happy", topic: "walk", line: rotate(input.now, ["Goal smashed! Every step now is pure bonus.", "You did it. Keep walking only if it still feels good."]) }
+      : { mood: "playful", topic: "walk", line: rotate(input.now, [`Keep going! ${fmt(day.stepsLeft)} steps and I do my happy dance.`, `${fmt(day.stepsLeft)} left. Find a good song and keep the pace.`, "Shoulders loose, eyes up. We're moving now!"]) };
+  }
+
+  if (latestMeal && input.now.getTime() - latestMealAt <= RECENT_MEAL_MS) {
     return reactToMeal(latestMeal.totals, day.proteinLeft);
   }
 
