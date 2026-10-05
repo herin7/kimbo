@@ -15,6 +15,9 @@ import { registerFoodAnalysisRoutes } from "./modules/food-analysis/food-analysi
 import type { HealthDataRepository } from "./modules/health-data/HealthDataRepository.js";
 import { registerHealthDataRoutes } from "./modules/health-data/health-data.routes.js";
 import { AppError } from "./shared/errors/AppError.js";
+import type { CoachingRepository } from "./modules/coaching/CoachingRepository.js";
+import { registerCoachingRoutes } from "./modules/coaching/coaching.routes.js";
+import { registerNotificationArtRoutes } from "./modules/coaching/notification-art.routes.js";
 
 export interface AppDependencies {
   env: Env;
@@ -22,6 +25,7 @@ export interface AppDependencies {
   transcriptionProvider: TranscriptionProvider;
   healthDataRepository?: HealthDataRepository;
   authRepository?: AuthRepository;
+  coachingRepository?: CoachingRepository;
 }
 
 export async function buildApp(dependencies: AppDependencies) {
@@ -39,12 +43,16 @@ export async function buildApp(dependencies: AppDependencies) {
   await app.register(rateLimit, { global: true, max: 120, timeWindow: "1 minute" });
 
   app.get("/health", async () => ({ status: "ok" }));
+  await registerNotificationArtRoutes(app);
   await registerFoodAnalysisRoutes(app, dependencies);
   if (dependencies.authRepository) {
     await registerAuthRoutes(app, dependencies.authRepository);
   }
   if (dependencies.healthDataRepository) {
     await registerHealthDataRoutes(app, dependencies.healthDataRepository, dependencies.authRepository);
+  }
+  if (dependencies.coachingRepository && dependencies.authRepository) {
+    await registerCoachingRoutes(app, dependencies.coachingRepository, dependencies.authRepository);
   }
 
   app.setErrorHandler((error, request, reply) => {

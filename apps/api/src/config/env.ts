@@ -11,6 +11,7 @@ const EnvSchema = z.object({
   BEDROCK_REGION: z.string().min(1).default("ap-south-1"),
   BEDROCK_MANTLE_API_KEY: z.string().min(1),
   AI_PROVIDER: z.enum(["real", "mock"]).default("real"),
+  API_URL: z.string().url().optional(),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

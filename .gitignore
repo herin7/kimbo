@@ -31,3 +31,7 @@ local.properties
 *.jsbundle
 apps/api/infra/
 apps/api/dist-lambda/
+
+# Firebase: service-account keys never enter git; google-services.json ships via an EAS file env var.
+*-firebase-adminsdk-*.json
+google-services.json

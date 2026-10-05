@@ -15,6 +15,13 @@
       "when": 1791145335606,
       "tag": "0001_amazing_sinister_six",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791192633917,
+      "tag": "0002_steep_centennial",
+      "breakpoints": true
     }
   ]
 }

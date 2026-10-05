@@ -7,9 +7,10 @@ import { ProductionFoodAnalysisProvider } from "./modules/food-analysis/provider
 import { SarvamTranscriptionProvider } from "./modules/food-analysis/providers/SarvamTranscriptionProvider.js";
 import { DrizzleHealthDataRepository } from "./modules/health-data/DrizzleHealthDataRepository.js";
 import { DrizzleAuthRepository } from "./modules/auth/DrizzleAuthRepository.js";
+import { DrizzleCoachingRepository } from "./modules/coaching/DrizzleCoachingRepository.js";
 
 /** The real app with its real dependencies. Shared by the local server and the Lambda handler. */
-export async function buildProductionApp(env: Env) {
+export async function buildProductionRuntime(env: Env) {
   const database = createDatabase(env.DATABASE_URL);
   const foodAnalysisProvider =
     env.AI_PROVIDER === "mock"
@@ -24,8 +25,13 @@ export async function buildProductionApp(env: Env) {
     transcriptionProvider: new SarvamTranscriptionProvider(env.SARVAM_API_KEY),
     healthDataRepository: new DrizzleHealthDataRepository(database.db),
     authRepository: new DrizzleAuthRepository(database.db),
+    coachingRepository: new DrizzleCoachingRepository(database.db),
   });
 
   app.addHook("onClose", async () => database.close());
-  return app;
+  return { app, db: database.db };
+}
+
+export async function buildProductionApp(env: Env) {
+  return (await buildProductionRuntime(env)).app;
 }

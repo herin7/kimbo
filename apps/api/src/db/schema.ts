@@ -88,3 +88,17 @@ export const dailyHealthSummaries = pgTable("daily_health_summaries", {
   hasActivityData: boolean("has_activity_data").notNull().default(false),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [primaryKey({ columns: [table.userId, table.date] })]);
+
+export const pushTokens = pgTable("push_tokens", {
+  token: text("token").primaryKey(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const coachingNotifications = pgTable("coaching_notifications", {
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  key: text("key").notNull(),
+  kind: text("kind").notNull(),
+  localDate: date("local_date").notNull(),
+  sentAt: timestamp("sent_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [primaryKey({ columns: [table.userId, table.key] })]);

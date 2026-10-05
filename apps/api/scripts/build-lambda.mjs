@@ -15,6 +15,7 @@ await build({
   minifyWhitespace: true,
   minifySyntax: true,
   keepNames: true,
+  loader: { ".png": "binary" },
   // Some deps still call require(); give the ESM bundle a working one.
   banner: { js: "import { createRequire } from 'module'; const require = createRequire(import.meta.url);" },
   logLevel: "warning",
