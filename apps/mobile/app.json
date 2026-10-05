@@ -8,14 +8,14 @@
     "scheme": "kimbo",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "bundleIdentifier": "com.superkalam.kimbo",
+      "bundleIdentifier": "com.herin7.kimbo",
       "icon": "./assets/images/icon.png",
       "runtimeVersion": {
         "policy": "appVersion"
       }
     },
     "android": {
-      "package": "com.superkalam.kimbo",
+      "package": "com.herin7.kimbo",
       "adaptiveIcon": {
         "backgroundColor": "#E95A38",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
