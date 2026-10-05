@@ -8,6 +8,7 @@ import { mealRepository } from "@/features/meals/storage/meal.repository";
 import { onboardingQueryKey } from "@/features/onboarding/hooks/useOnboardingStatus";
 import { onboardingRepository } from "@/features/onboarding/storage/onboarding.repository";
 import { progressHistoryQueryKey, progressHistoryRepository } from "@/features/progress/storage/progress-history.repository";
+import KimboActivityModule from "../../../../modules/live-update";
 import { clearAuthSession, getAuthSession, saveAuthSession } from "@/shared/storage/identity.repository";
 
 import { fetchAccountSnapshot, login } from "../api/auth.api";
@@ -92,6 +93,13 @@ export function useLogout() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async () => {
+      // The Android island and its snapshot survive the JS process. Clear them before removing
+      // this account so an idle island cannot continue showing the previous user's data.
+      try {
+        KimboActivityModule?.clearIslandState();
+      } catch (error) {
+        console.warn("Kimbo: couldn't clear island state on logout", error);
+      }
       await Promise.all([
         clearAuthSession(),
         onboardingRepository.clearHealthGoal(),

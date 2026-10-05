@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from "react";
-import { AppState } from "react-native";
+import { AppRegistry, AppState, Platform } from "react-native";
 
 import KimboActivityModule, { type LiveActivityActionEventPayload } from "../../../../modules/live-update";
 import { useIslandMealLogging } from "@/features/meals/hooks/useIslandMealLogging";
@@ -10,6 +10,17 @@ import { resolveLiveActivityProvider } from "@/native/live-update/live-activity"
 import { useActiveSession, useTodaySteps } from "../hooks/activity.queries";
 import { useEndActivity } from "../hooks/useEndActivity";
 import { useStartActivity } from "../hooks/useStartActivity";
+
+// Island taps arrive as a headless task (see KimboActivityModule.dispatchLiveActivityAction):
+// while it runs, Android keeps JS timers, and therefore fetch, alive with Kimbo in the background.
+let islandActionHandler: ((payload: LiveActivityActionEventPayload) => Promise<unknown>) | null = null;
+if (Platform.OS === "android") {
+  AppRegistry.registerHeadlessTask("KimboIslandAction", () => async (payload) => {
+    // No handler means signed out or not mounted yet; the action stays pending natively.
+    await islandActionHandler?.(payload as LiveActivityActionEventPayload)
+      .catch((error: unknown) => console.warn("Kimbo: island action failed", error));
+  });
+}
 
 /**
  * Root-level bridge between React Native (the source of truth) and the Android system surfaces:
@@ -112,10 +123,10 @@ export function LiveActivityCoordinator() {
   }, []);
 
   useEffect(() => {
-    const subscription = KimboActivityModule?.addListener("onLiveActivityAction", (payload) => {
-      void handleAction(payload).catch((error: unknown) => console.warn("Kimbo: island action failed", error));
-    });
-    return () => subscription?.remove();
+    islandActionHandler = handleAction;
+    return () => {
+      if (islandActionHandler === handleAction) islandActionHandler = null;
+    };
   }, [handleAction]);
 
   // An action tapped while the app was closed waits until today's data (incl. the session) loads.

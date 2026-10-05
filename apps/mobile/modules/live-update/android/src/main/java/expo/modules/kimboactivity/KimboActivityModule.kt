@@ -11,8 +11,15 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.net.Uri
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import androidx.core.content.ContextCompat
+import com.facebook.react.bridge.Arguments
+import com.facebook.react.bridge.ReactContext
+import com.facebook.react.bridge.UiThreadUtil
+import com.facebook.react.jstasks.HeadlessJsTaskConfig
+import com.facebook.react.jstasks.HeadlessJsTaskContext
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.PermissionController
@@ -96,7 +103,7 @@ class KimboActivityModule : Module(), SensorEventListener {
 
   override fun definition() = ModuleDefinition {
     Name("KimboActivity")
-    Events("onStepUpdate", "onLiveActivityAction")
+    Events("onStepUpdate")
 
     OnCreate {
       activeModule = this@KimboActivityModule
@@ -230,6 +237,17 @@ class KimboActivityModule : Module(), SensorEventListener {
       ActivityLiveService.updateSnapshot(context, input.toSnapshot())
     }
 
+    // Logout: the island outlives the JS session, so tear it down with everything it remembers.
+    Function("clearIslandState") {
+      stopNativeActivityTracking()
+      IslandSnapshot().save(context)
+      context.getSharedPreferences(ACTION_PREFERENCES, Context.MODE_PRIVATE).edit().clear().apply()
+      val appContext = context.applicationContext
+      ActivityLiveService.setOverlayEnabled(appContext, false)
+      // Queued behind setOverlayEnabled's re-present so nothing re-persists the old walk afterwards.
+      Handler(Looper.getMainLooper()).post { ActivityLiveService.stop(appContext) }
+    }
+
     Function("setIslandMeal") { input: IslandMealRecord ->
       ActivityLiveService.updateMeal(input.toMeal())
     }
@@ -313,6 +331,9 @@ class KimboActivityModule : Module(), SensorEventListener {
     private const val ACTION_PREFERENCES = "kimbo_live_activity_actions"
     private const val PENDING_ACTION_KEY = "pending_action"
     private const val PENDING_URI_KEY = "pending_uri"
+    private const val ISLAND_ACTION_TASK = "KimboIslandAction"
+    // ponytail: covers transcribe (60s) + analyse (30s) timeouts; the action stays pending past it.
+    private const val ISLAND_ACTION_TIMEOUT_MS = 120_000L
     @Volatile private var activeModule: KimboActivityModule? = null
 
     internal fun dispatchLiveActivityAction(context: Context, action: String, uri: String? = null): Boolean {
@@ -323,8 +344,20 @@ class KimboActivityModule : Module(), SensorEventListener {
         .putString(PENDING_ACTION_KEY, action)
         .putString(PENDING_URI_KEY, uri)
         .apply()
-      val module = activeModule ?: return false
-      module.sendEvent("onLiveActivityAction", mapOf("action" to action, "uri" to uri))
+      val reactContext = activeModule?.appContext?.reactContext as? ReactContext ?: return false
+      // Delivered as a headless task, not an event: Android pauses JS timers while Kimbo is in
+      // the background unless a task is running, and fetch resolves on a timer, so island meal
+      // logging would otherwise hang on "Kimbo is thinking…" until the app was reopened.
+      val data = Arguments.createMap().apply {
+        putString("action", action)
+        putString("uri", uri)
+      }
+      UiThreadUtil.runOnUiThread {
+        runCatching {
+          HeadlessJsTaskContext.getInstance(reactContext)
+            .startTask(HeadlessJsTaskConfig(ISLAND_ACTION_TASK, data, ISLAND_ACTION_TIMEOUT_MS, true))
+        }
+      }
       return true
     }
 

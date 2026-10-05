@@ -19,6 +19,7 @@ class KimboActivityModule extends NativeModule<KimboActivityModuleEvents> {
   consumePendingLiveActivityAction() { return null; }
   setIslandSnapshot(_snapshot: IslandSnapshot) {}
   setIslandMeal(_meal: IslandMeal) {}
+  clearIslandState() {}
   async startLiveActivity(_input: LiveActivityStartInput) {}
   async updateLiveActivity(_input: LiveActivityUpdateInput) {}
   async endLiveActivity() {}

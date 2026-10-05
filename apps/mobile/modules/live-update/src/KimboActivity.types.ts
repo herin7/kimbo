@@ -1,6 +1,5 @@
 export type KimboActivityModuleEvents = {
   onStepUpdate: (params: StepUpdateEventPayload) => void;
-  onLiveActivityAction: (params: LiveActivityActionEventPayload) => void;
 };
 
 export type StepUpdateEventPayload = {
