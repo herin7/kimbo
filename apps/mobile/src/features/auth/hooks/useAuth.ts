@@ -7,6 +7,7 @@ import { mealsQueryKey } from "@/features/meals/hooks/meal.queries";
 import { mealRepository } from "@/features/meals/storage/meal.repository";
 import { onboardingQueryKey } from "@/features/onboarding/hooks/useOnboardingStatus";
 import { onboardingRepository } from "@/features/onboarding/storage/onboarding.repository";
+import { progressHistoryQueryKey, progressHistoryRepository } from "@/features/progress/storage/progress-history.repository";
 import { clearAuthSession, getAuthSession, saveAuthSession } from "@/shared/storage/identity.repository";
 
 import { login } from "../api/auth.api";
@@ -24,6 +25,7 @@ async function persistLogin(result: LoginResponse) {
     onboardingRepository.saveHealthGoal(result.goal),
     mealRepository.replaceMeals(result.meals),
     activityRepository.replaceSessions(result.activitySessions),
+    progressHistoryRepository.replaceSummaries(result.dailySummaries),
   ]);
   return { result, session };
 }
@@ -37,6 +39,7 @@ export function useLogin() {
       queryClient.setQueryData(onboardingQueryKey, result.goal);
       queryClient.setQueryData(mealsQueryKey, result.meals);
       queryClient.setQueryData(activitySessionsQueryKey, result.activitySessions);
+      queryClient.setQueryData(progressHistoryQueryKey, result.dailySummaries);
       queryClient.setQueryData(activeSessionQueryKey, result.activitySessions.find((item) => item.state === "active") ?? null);
     },
   });
@@ -51,6 +54,7 @@ export function useLogout() {
         onboardingRepository.clearHealthGoal(),
         mealRepository.clear(),
         activityRepository.clear(),
+        progressHistoryRepository.clear(),
       ]);
     },
     onSuccess: () => queryClient.clear(),

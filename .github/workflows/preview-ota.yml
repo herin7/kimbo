@@ -1,0 +1,32 @@
+name: Publish Preview OTA
+
+on:
+  workflow_dispatch:
+    inputs:
+      message:
+        description: Release note for this preview update
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: preview-ota
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: preview
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      UPDATE_MESSAGE: ${{ inputs.message || format('Preview OTA {0}', github.sha) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx eas-cli@latest update --channel preview --platform android --environment preview --message "$UPDATE_MESSAGE" --non-interactive

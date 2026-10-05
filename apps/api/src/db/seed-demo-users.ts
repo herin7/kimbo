@@ -56,18 +56,35 @@ try {
       };
       await tx.insert(healthGoals).values(goal).onConflictDoUpdate({ target: healthGoals.userId, set: goal });
 
-      for (let index = 0; index < 7; index += 1) {
-        const date = dateForOffset(index - 6);
-        const ratio = profile.adherence[index] ?? 0.8;
+      // Keep a full year of lightweight daily history for range and calendar stress-testing.
+      // Detailed meals/walks stay limited to the latest week so login payloads remain small.
+      for (let index = 0; index < 365; index += 1) {
+        const date = dateForOffset(index - 364);
+        const recentIndex = index - 358;
+        const isRecentWeek = recentIndex >= 0;
+        const baseline = profile.adherence[(isRecentWeek ? recentIndex : index) % profile.adherence.length] ?? 0.8;
+        const seasonalShift = Math.sin(index / 23) * 0.09 + ((index % 9) - 4) * 0.008;
+        const ratio = isRecentWeek ? baseline : Math.max(0.5, Math.min(1.08, baseline + seasonalShift));
+        const hasData = isRecentWeek || (index % 13 !== 0 && index % 29 !== 0);
         const calories = Math.round(profile.calories * ratio);
         const protein = Math.round(profile.protein * Math.min(1.05, ratio + 0.08));
         const steps = Math.round(profile.steps * Math.min(1.12, ratio + (index % 2 === 0 ? 0.08 : -0.03)));
-        await tx.insert(dailyHealthSummaries).values({ userId: profile.id, date, calories, proteinGrams: protein, steps, hasMealData: true, hasActivityData: true });
+        await tx.insert(dailyHealthSummaries).values({
+          userId: profile.id,
+          date,
+          calories: hasData ? calories : 0,
+          proteinGrams: hasData ? protein : 0,
+          steps: hasData ? steps : null,
+          hasMealData: hasData,
+          hasActivityData: hasData,
+        });
+
+        if (!isRecentWeek) continue;
 
         const mealsForDay = [
-          { type: "breakfast" as const, hour: "08:30:00", name: index % 2 === 0 ? "Masala omelette and toast" : "Greek yoghurt fruit bowl", share: 0.28, proteinShare: 0.3 },
-          { type: "lunch" as const, hour: "13:00:00", name: index % 3 === 0 ? "Paneer rice bowl" : "Dal, roti and salad", share: 0.4, proteinShare: 0.42 },
-          { type: "dinner" as const, hour: "20:00:00", name: index % 2 === 0 ? "Grilled chicken and vegetables" : "Tofu curry and rice", share: 0.32, proteinShare: 0.28 },
+          { type: "breakfast" as const, hour: "08:30:00", name: recentIndex % 2 === 0 ? "Masala omelette and toast" : "Greek yoghurt fruit bowl", share: 0.28, proteinShare: 0.3 },
+          { type: "lunch" as const, hour: "13:00:00", name: recentIndex % 3 === 0 ? "Paneer rice bowl" : "Dal, roti and salad", share: 0.4, proteinShare: 0.42 },
+          { type: "dinner" as const, hour: "20:00:00", name: recentIndex % 2 === 0 ? "Grilled chicken and vegetables" : "Tofu curry and rice", share: 0.32, proteinShare: 0.28 },
         ];
         for (const sample of mealsForDay) {
           const mealId = randomUUID();
@@ -77,7 +94,7 @@ try {
             id: mealId,
             userId: profile.id,
             mealType: sample.type,
-            source: index % 3 === 0 ? "image" : index % 2 === 0 ? "voice" : "manual",
+            source: recentIndex % 3 === 0 ? "image" : recentIndex % 2 === 0 ? "voice" : "manual",
             totalCalories: mealCalories,
             totalProteinGrams: mealProtein,
             totalCarbsGrams: Math.round(mealCalories * 0.11),
@@ -99,7 +116,7 @@ try {
           });
         }
 
-        if (index < 6) {
+        if (recentIndex < 6) {
           await tx.insert(activitySessions).values({
             id: randomUUID(),
             userId: profile.id,

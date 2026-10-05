@@ -89,24 +89,32 @@ export function LiveActivityCoordinator() {
     latest.current = { endActivity, meal, session, startActivity, steps };
   });
   const handleAction = useCallback(async ({ action, uri }: LiveActivityActionEventPayload) => {
-    KimboActivityModule?.consumePendingLiveActivityAction();
     const current = latest.current;
+    // Consume only after the work succeeds. If local persistence fails or JavaScript is suspended,
+    // Android keeps the action durable and it can be retried the next time Kimbo becomes active.
+    const complete = async (work: () => Promise<unknown> | unknown) => {
+      await work();
+      KimboActivityModule?.consumePendingLiveActivityAction();
+    };
     // Meal steps run independently, so Discard still works while a recording is being analysed.
-    if (action === "meal-voice") return uri ? current.meal.handleVoice(uri) : undefined;
-    if (action === "meal-save") return current.meal.handleSave();
-    if (action === "meal-discard") return current.meal.handleDiscard();
+    if (action === "meal-voice") return complete(() => uri ? current.meal.handleVoice(uri) : undefined);
+    if (action === "meal-save") return complete(() => current.meal.handleSave());
+    if (action === "meal-discard") return complete(() => current.meal.handleDiscard());
     if (isHandlingAction.current) return;
     isHandlingAction.current = true;
     try {
       if (action === "end" && current.session) await current.endActivity(current.session, current.steps);
       if (action === "start" && !current.session) await current.startActivity();
+      KimboActivityModule?.consumePendingLiveActivityAction();
     } finally {
       isHandlingAction.current = false;
     }
   }, []);
 
   useEffect(() => {
-    const subscription = KimboActivityModule?.addListener("onLiveActivityAction", (payload) => void handleAction(payload));
+    const subscription = KimboActivityModule?.addListener("onLiveActivityAction", (payload) => {
+      void handleAction(payload).catch((error: unknown) => console.warn("Kimbo: island action failed", error));
+    });
     return () => subscription?.remove();
   }, [handleAction]);
 
@@ -116,7 +124,7 @@ export function LiveActivityCoordinator() {
   useEffect(() => {
     if (!isReady) return;
     const pending = KimboActivityModule?.consumePendingLiveActivityAction();
-    if (pending) void handleAction(pending);
+    if (pending) void handleAction(pending).catch((error: unknown) => console.warn("Kimbo: pending island action failed", error));
   }, [handleAction, isReady]);
 
   return null;

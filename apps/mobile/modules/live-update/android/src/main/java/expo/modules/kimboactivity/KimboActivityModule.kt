@@ -261,10 +261,7 @@ class KimboActivityModule : Module(), SensorEventListener {
     }
 
     AsyncFunction("endLiveActivity") {
-      activeTarget = null
-      activeStartingSteps = null
-      activeStartedAtMillis = null
-      activePreferLiveUpdate = false
+      stopNativeActivityTracking()
       ActivityLiveService.stop(context)
     }
   }
@@ -298,6 +295,16 @@ class KimboActivityModule : Module(), SensorEventListener {
   private fun hasNotificationPermission(): Boolean = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
     ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
 
+  private fun stopNativeActivityTracking() {
+    sensorManager?.unregisterListener(this)
+    sensorManager = null
+    sensorStartValue = null
+    activeTarget = null
+    activeStartingSteps = null
+    activeStartedAtMillis = null
+    activePreferLiveUpdate = false
+  }
+
   companion object {
     private const val ACTION_PREFERENCES = "kimbo_live_activity_actions"
     private const val PENDING_ACTION_KEY = "pending_action"
@@ -305,14 +312,26 @@ class KimboActivityModule : Module(), SensorEventListener {
     @Volatile private var activeModule: KimboActivityModule? = null
 
     internal fun dispatchLiveActivityAction(context: Context, action: String, uri: String? = null): Boolean {
-      context.getSharedPreferences(ACTION_PREFERENCES, Context.MODE_PRIVATE)
-        .edit()
+      val preferences = context.getSharedPreferences(ACTION_PREFERENCES, Context.MODE_PRIVATE)
+      // Do not let a quick Start tap replace an End that JavaScript has not persisted yet.
+      if (action == "start" && preferences.getString(PENDING_ACTION_KEY, null) == "end") return false
+      preferences.edit()
         .putString(PENDING_ACTION_KEY, action)
         .putString(PENDING_URI_KEY, uri)
         .apply()
       val module = activeModule ?: return false
       module.sendEvent("onLiveActivityAction", mapOf("action" to action, "uri" to uri))
       return true
+    }
+
+    /**
+     * A system-island tap must take effect even while React Native is suspended. The pending
+     * action remains durable so JavaScript can finalize the local session when it resumes;
+     * native tracking and the live walk surface stop immediately.
+     */
+    internal fun endLiveActivityFromIsland(context: Context) {
+      activeModule?.stopNativeActivityTracking()
+      ActivityLiveService.stop(context)
     }
   }
 

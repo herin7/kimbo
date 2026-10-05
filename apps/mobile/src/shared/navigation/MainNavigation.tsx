@@ -1,6 +1,6 @@
 import * as Haptics from "expo-haptics";
 import { usePathname, useRouter, type Href } from "expo-router";
-import { ChartSpline, Footprints, SunMedium, UserRound } from "lucide-react-native";
+import { CalendarDays, Footprints, SunMedium, UserRound } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { BackHandler, Platform, Pressable, StyleSheet, View, type LayoutChangeEvent } from "react-native";
 import Animated, { ReduceMotion, useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
@@ -11,7 +11,7 @@ import { SurfaceGradient, Text, useKimboTheme } from "@/design-system";
 const destinations = [
   { label: "Today", route: "/today" as const, Icon: SunMedium },
   { label: "Activity", route: "/activity" as const, Icon: Footprints },
-  { label: "Progress", route: "/progress" as const, Icon: ChartSpline },
+  { label: "Progress", route: "/progress" as const, Icon: CalendarDays },
   { label: "Profile", route: "/profile" as const, Icon: UserRound },
 ];
 

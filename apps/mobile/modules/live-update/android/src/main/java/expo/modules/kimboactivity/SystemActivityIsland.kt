@@ -410,7 +410,8 @@ internal class SystemActivityIsland(private val context: Context) {
     primaryAction?.configure("Ending…", R.drawable.kimbo_ic_stop, DANGER, Color.WHITE, enabled = false) {}
     secondaryAction?.view?.isEnabled = false
     root?.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
-    if (!KimboActivityModule.dispatchLiveActivityAction(context, "end")) openKimbo()
+    KimboActivityModule.dispatchLiveActivityAction(context, "end")
+    KimboActivityModule.endLiveActivityFromIsland(context)
   }
 
   private fun updateMood(mood: String) {

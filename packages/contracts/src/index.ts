@@ -199,6 +199,8 @@ export const LoginResponseSchema = AuthSessionSchema.extend({
   goal: HealthGoalSchema,
   meals: z.array(ConfirmedMealSchema),
   activitySessions: z.array(ActivitySessionSchema),
+  // Default keeps a newer app compatible with an older API during a staged production rollout.
+  dailySummaries: z.array(DailyHealthSummarySchema).default([]),
 });
 export type LoginResponse = z.infer<typeof LoginResponseSchema>;
 

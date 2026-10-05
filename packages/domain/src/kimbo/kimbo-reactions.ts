@@ -31,6 +31,8 @@ export interface KimboNudge {
 
 const RECENT_MEAL_MS = 20 * 60_000;
 const fmt = (value: number) => Math.round(value).toLocaleString("en-IN");
+/** Rotate coaching copy slowly so Kimbo stays present without flickering on every render. */
+const rotate = (now: Date, lines: readonly string[]) => lines[Math.floor(now.getTime() / (15 * 60_000)) % lines.length] ?? lines[0] ?? "";
 
 /**
  * Judges a meal by where its energy comes from. Deliberately coarse: Kimbo reacts to obvious
@@ -108,34 +110,34 @@ export function deriveKimboReaction(input: KimboDayInput): KimboReaction {
 
   if (input.isWalking) {
     return day.stepsLeft === 0
-      ? { mood: "happy", topic: "walk", line: "Goal smashed! Every step now is pure bonus." }
-      : { mood: "playful", topic: "walk", line: `Keep going! ${fmt(day.stepsLeft)} steps and I do my happy dance.` };
+      ? { mood: "happy", topic: "walk", line: rotate(input.now, ["Goal smashed! Every step now is pure bonus.", "You did it. Keep walking only if it still feels good."]) }
+      : { mood: "playful", topic: "walk", line: rotate(input.now, [`Keep going! ${fmt(day.stepsLeft)} steps and I do my happy dance.`, `${fmt(day.stepsLeft)} left. Find a good song and keep the pace.`, "Shoulders loose, eyes up. We're moving now!"]) };
   }
 
   if (day.stepsLeft === 0 && day.proteinProgress >= 0.9) {
-    return { mood: "happy", topic: "goals", line: "Protein done, steps done. I'm so proud of you!" };
+    return { mood: "happy", topic: "goals", line: rotate(input.now, ["Protein done, steps done. I'm so proud of you!", "Both goals handled. That's the kind of day we repeat."]) };
   }
 
   if (input.calorieTarget > 0 && day.calories > input.calorieTarget * 1.1) {
-    return { mood: "sad", topic: "calories", line: "We went over today. Tomorrow's a fresh page." };
+    return { mood: "sad", topic: "calories", line: rotate(input.now, ["We went over today. Tomorrow's a fresh page.", "A heavier day isn't a verdict. A short walk would still help."]) };
   }
 
   if (hour >= 18) {
     if (input.meals.length > 0 && day.proteinProgress < 0.6) {
-      return { mood: "angry", topic: "protein", line: `Who's covering today's protein? ${fmt(day.proteinLeft)} g still missing!` };
+      return { mood: "angry", topic: "protein", line: rotate(input.now, [`Who's covering today's protein? ${fmt(day.proteinLeft)} g still missing!`, `${fmt(day.proteinLeft)} g left this late? Dinner needs a protein plan.`]) };
     }
     if (day.stepProgress < 0.5) {
-      return { mood: "angry", topic: "movement", line: `${fmt(input.steps)} steps today?! Even I moved more, and I'm a ball.` };
+      return { mood: "angry", topic: "movement", line: rotate(input.now, [`${fmt(input.steps)} steps today?! Even I moved more, and I'm a ball.`, "Shoes on. Ten brisk minutes before the sofa wins."]) };
     }
   }
 
   if (hour >= 11 && input.meals.length === 0) {
-    return { mood: "sad", topic: "breakfast", line: "Running on empty here. Log your first meal?" };
+    return { mood: "sad", topic: "breakfast", line: rotate(input.now, ["Running on empty here. Log your first meal?", "No meal logged yet. Feed yourself, then tell me what it was."]) };
   }
 
   if (hour >= 14) {
     if (day.stepProgress < 0.3) {
-      return { mood: "sad", topic: "movement", line: "Haven't seen you move since morning. Ten minutes outside?" };
+      return { mood: "sad", topic: "movement", line: rotate(input.now, ["Haven't seen you move since morning. Ten minutes outside?", "Tiny mission: one lap around the block before the next scroll."]) };
     }
     if (day.proteinProgress < 0.35) {
       return { mood: "sad", topic: "protein", line: "Protein's lagging. Eggs, paneer, dal… pick one!" };
@@ -143,17 +145,29 @@ export function deriveKimboReaction(input: KimboDayInput): KimboReaction {
   }
 
   if (day.stepProgress >= 0.75 && day.stepsLeft > 0) {
-    return { mood: "playful", topic: "movement", line: `So close! ${fmt(day.stepsLeft)} steps feels like a victory lap.` };
+    return { mood: "playful", topic: "movement", line: rotate(input.now, [`So close! ${fmt(day.stepsLeft)} steps feels like a victory lap.`, `${fmt(day.stepsLeft)} steps left. Don't leave that streak on the table.`]) };
+  }
+
+  if (day.stepProgress >= 0.5 || day.proteinProgress >= 0.6) {
+    const topic = day.stepProgress < day.proteinProgress ? "movement" : "protein";
+    return {
+      mood: "playful",
+      topic,
+      line: rotate(input.now, [
+        `Good momentum. Now close the ${topic === "movement" ? `${fmt(day.stepsLeft)}-step` : `${fmt(day.proteinLeft)} g`} gap.`,
+        `Halfway is where days drift. One more ${topic === "movement" ? "walk" : "protein-first meal"} keeps this one alive.`,
+      ]),
+    };
   }
 
   if (input.meals.length === 0) {
-    return { mood: "neutral", topic: "breakfast", line: "Morning! What's on the plate today?" };
+    return { mood: "neutral", topic: "breakfast", line: rotate(input.now, ["Morning! What's on the plate today?", "New day. Give me one good meal and one good walk."]) };
   }
 
   return {
     mood: "neutral",
     topic: "idle",
-    line: `${fmt(day.proteinLeft)} g protein and ${fmt(day.stepsLeft)} steps left. We've got this.`,
+    line: rotate(input.now, [`${fmt(day.proteinLeft)} g protein and ${fmt(day.stepsLeft)} steps left. We've got this.`, `Next move: ${day.proteinLeft > 0 ? `${fmt(day.proteinLeft)} g protein` : `${fmt(day.stepsLeft)} steps`}. Keep it simple.`, "You're not behind. Pick the smallest useful action and do it now."]),
   };
 }
 

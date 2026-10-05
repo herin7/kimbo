@@ -1,9 +1,9 @@
 import { randomBytes, createHash } from "node:crypto";
-import type { ActivitySession, ConfirmedMeal, HealthGoal, LoginRequest, LoginResponse, UserProfile } from "@kimbo/contracts";
+import type { ActivitySession, ConfirmedMeal, DailyHealthSummary, HealthGoal, LoginRequest, LoginResponse, UserProfile } from "@kimbo/contracts";
 import { and, eq, gt } from "drizzle-orm";
 
 import type { Database } from "../../db/database.js";
-import { activitySessions, authSessions, healthGoals, mealItems, meals, users } from "../../db/schema.js";
+import { activitySessions, authSessions, dailyHealthSummaries, healthGoals, mealItems, meals, users } from "../../db/schema.js";
 import { AppError } from "../../shared/errors/AppError.js";
 import type { AuthRepository } from "./AuthRepository.js";
 import { verifyPassword } from "./password.js";
@@ -28,6 +28,7 @@ export class DrizzleAuthRepository implements AuthRepository {
       ? []
       : (await Promise.all(mealRows.map((meal) => this.db.select().from(mealItems).where(eq(mealItems.mealId, meal.id))))).flat();
     const sessionRows = await this.db.select().from(activitySessions).where(eq(activitySessions.userId, row.id));
+    const summaryRows = await this.db.select().from(dailyHealthSummaries).where(eq(dailyHealthSummaries.userId, row.id));
 
     const token = randomBytes(32).toString("base64url");
     const expiresAt = new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1_000);
@@ -80,7 +81,18 @@ export class DrizzleAuthRepository implements AuthRepository {
       estimatedDistanceMeters: session.estimatedDistanceMeters,
       syncStatus: "synced",
     }));
-    return { token, user, goal, meals: confirmedMeals, activitySessions: activities };
+    const summaries: DailyHealthSummary[] = summaryRows.map((summary) => ({
+      date: summary.date,
+      calories: summary.calories,
+      calorieTarget: goal.dailyCalorieTarget,
+      proteinGrams: summary.proteinGrams,
+      proteinTargetGrams: goal.dailyProteinTargetGrams,
+      steps: summary.steps,
+      stepTarget: goal.dailyStepTarget,
+      hasMealData: summary.hasMealData,
+      hasActivityData: summary.hasActivityData,
+    }));
+    return { token, user, goal, meals: confirmedMeals, activitySessions: activities, dailySummaries: summaries };
   }
 
   async authenticate(token: string): Promise<string | null> {
