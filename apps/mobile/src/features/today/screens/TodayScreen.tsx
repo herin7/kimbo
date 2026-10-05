@@ -5,7 +5,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Pressable, RefreshControl, StyleSheet, View } from "react-native";
 import Animated, { FadeInDown, ReduceMotion, useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
 
-import { Card, ProgressBar, ProgressRing, Screen, SurfaceGradient, Text, useKimboTheme } from "@/design-system";
+import { Button, Card, ProgressBar, ProgressRing, Screen, SurfaceGradient, Text, useKimboTheme } from "@/design-system";
 import { LiveIslandControl } from "@/features/activity/components/LiveIslandControl";
 import { KimboSays } from "@/features/kimbo/components/KimboSays";
 import { useKimboDay } from "@/features/kimbo/hooks/useKimboDay";
@@ -38,7 +38,7 @@ export function TodayScreen() {
   }, []);
 
   if (!day) return null;
-  const { calories, goal, protein, reaction, session, steps, todaysMeals } = day;
+  const { calories, goal, insight, protein, reaction, session, steps, todaysMeals } = day;
 
   const remainingCalories = calculateRemaining(calories, goal.dailyCalorieTarget);
   const overCalories = calculateOverage(calories, goal.dailyCalorieTarget);
@@ -132,6 +132,7 @@ export function TodayScreen() {
 
       <Card style={[styles.kimboCard, { borderColor: colors.border, borderRadius: radius.xl, padding: spacing.lg }]} variant="outlined">
         <KimboSays line={reaction.line} mood={reaction.mood} />
+        {insight?.actionable ? <Button onPress={() => router.push(insight.action.route)} variant="secondary">{insight.action.label}</Button> : null}
       </Card>
 
       <View style={{ gap: spacing.md }}>
@@ -309,7 +310,7 @@ const styles = StyleSheet.create({
   heroMetrics: { flexDirection: "row" },
   heroMetric: { borderWidth: StyleSheet.hairlineWidth, flex: 1 },
   metricDot: { borderRadius: 99, height: 6, width: 6 },
-  kimboCard: { borderWidth: StyleSheet.hairlineWidth },
+  kimboCard: { borderWidth: StyleSheet.hairlineWidth, gap: 12 },
   sectionHeading: { alignItems: "baseline", flexDirection: "row", justifyContent: "space-between" },
   quickAction: { alignItems: "center", borderWidth: StyleSheet.hairlineWidth, flex: 1, minHeight: 100, overflow: "hidden" },
   quickIcon: { alignItems: "center", borderWidth: 1.5, height: 44, justifyContent: "center", width: 44 },

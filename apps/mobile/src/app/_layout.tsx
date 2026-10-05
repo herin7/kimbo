@@ -16,7 +16,7 @@ import { useKimboTheme } from "@/design-system";
 import { MainNavigation, useBackFallsBackToToday } from "@/shared/navigation/MainNavigation";
 import { useOnboardingStatus } from "@/features/onboarding";
 import { LiveActivityCoordinator } from "@/features/activity/components/LiveActivityCoordinator";
-import { KimboNudgeScheduler } from "@/features/kimbo/components/KimboNudgeScheduler";
+import { KimboNotifications } from "@/features/notifications/KimboNotifications";
 import { KimboModePermissionGate } from "@/features/activity/components/KimboModePermissionGate";
 import { useAuthSession } from "@/features/auth/hooks/useAuth";
 
@@ -68,7 +68,7 @@ function RootStack() {
         <Stack.Screen name="meal/camera" options={{ headerShown: false }} />
       </Stack>
       {auth ? <LiveActivityCoordinator /> : null}
-      {auth ? <KimboNudgeScheduler /> : null}
+      {auth ? <KimboNotifications /> : null}
       <MainNavigation />
       {auth ? <KimboModePermissionGate /> : null}
       {isIntroVisible ? <KimboIntro onDone={hideIntro} /> : null}

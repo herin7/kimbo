@@ -1,10 +1,11 @@
-import { deriveKimboReaction, type KimboDayInput, type KimboReaction } from "@kimbo/domain";
+import { coachingDayFrom, deriveKimboReaction, evaluateDay, type Insight, type KimboDayInput, type KimboReaction } from "@kimbo/domain";
 import type { ActivitySession, ConfirmedMeal, HealthGoal } from "@kimbo/contracts";
 import { useEffect, useMemo, useState } from "react";
 
 import { useActiveSession, useTodaySteps } from "@/features/activity/hooks/activity.queries";
 import { useMeals } from "@/features/meals/hooks/meal.queries";
 import { useOnboardingStatus } from "@/features/onboarding";
+import { useProgressHistory } from "@/features/progress/hooks/useProgressHistory";
 
 export interface KimboDay {
   goal: HealthGoal;
@@ -15,6 +16,7 @@ export interface KimboDay {
   session: ActivitySession | null;
   input: KimboDayInput;
   reaction: KimboReaction;
+  insight: Insight | null;
 }
 
 /** Re-evaluate once a minute so time-of-day moods (lunch, evening) move without new data. */
@@ -34,6 +36,7 @@ export function useKimboDay(): KimboDay | null {
   const { data: meals = [] } = useMeals();
   const { data: steps = 0 } = useTodaySteps();
   const { data: session = null } = useActiveSession();
+  const progressHistory = useProgressHistory();
 
   // Meals are the whole history: re-filter only when they or the date change, not every tick.
   const today = now.toDateString();
@@ -48,6 +51,7 @@ export function useKimboDay(): KimboDay | null {
 
   return useMemo(() => {
     if (!goal) return null;
+    const history = progressHistory.data ?? [];
     const { todaysMeals } = todays;
     const input: KimboDayInput = {
       now,
@@ -58,14 +62,19 @@ export function useKimboDay(): KimboDay | null {
       stepTarget: goal.dailyStepTarget,
       isWalking: Boolean(session),
       walkingStartedAt: session?.startedAt ?? null,
+      timeZone: goal.timeZone,
     };
+    const reaction = deriveKimboReaction(input, history);
+    const candidate = evaluateDay(coachingDayFrom(input, history))[0] ?? null;
+    const insight = candidate && candidate.mood === reaction.mood && candidate.topic === reaction.topic ? candidate : null;
     return {
       goal,
       ...todays,
       steps,
       session,
       input,
-      reaction: deriveKimboReaction(input),
+      reaction,
+      insight,
     };
-  }, [goal, now, session, steps, todays]);
+  }, [goal, now, progressHistory.data, session, steps, todays]);
 }

@@ -1,4 +1,4 @@
-import { reactToWeek } from "@kimbo/domain";
+import { buildWeeklyReflection } from "@kimbo/domain";
 import { CalendarDays, Flame } from "lucide-react-native";
 import { useMemo, useState } from "react";
 import { Pressable, RefreshControl, StyleSheet, View } from "react-native";
@@ -30,13 +30,7 @@ export function ProgressScreen() {
 
   const first = new Date(`${overview.days[0]?.date}T00:00:00`);
   const last = new Date(`${overview.days.at(-1)?.date}T00:00:00`);
-  const kimbo = reactToWeek({
-    caloriesPercent: overview.caloriesPercent,
-    movementPercent: overview.movementPercent,
-    proteinPercent: overview.proteinPercent,
-    daysWithData: overview.activeDays,
-    weakestMetric: overview.weakestMetric,
-  });
+  const reflection = buildWeeklyReflection(overview.days.slice(-7), overview.days.slice(-14, -7));
 
   return (
     <Screen contentContainerStyle={{ paddingBottom: spacing.huge * 2, paddingTop: spacing.huge + spacing.xxl }} refreshControl={<RefreshControl colors={[colors.brand]} onRefresh={() => refresh.mutate()} refreshing={refresh.isPending} tintColor={colors.brand} />}>
@@ -111,13 +105,10 @@ export function ProgressScreen() {
       </View>
 
       <Card style={[styles.insight, { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: radius.xl }]} variant="outlined">
-        <KimboSays line={kimbo.line} mood={kimbo.mood} />
+        <KimboSays line={reflection.wentWell} mood={reflection.mood} />
         <Text style={{ marginTop: spacing.sm }} variant="heading">{"Kimbo's read"}</Text>
-        <Text color="secondary">
-          {overview.activeDays > 0
-            ? `${overview.activeDays} recorded days give Kimbo enough signal to keep pushing the habit that needs it most.`
-            : "Log a meal or take a walk and your first streak starts here."}
-        </Text>
+        <Text color="secondary">{reflection.pattern}</Text>
+        <Text color="secondary">{reflection.focus}</Text>
       </Card>
     </Screen>
   );

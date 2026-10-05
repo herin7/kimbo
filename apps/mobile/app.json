@@ -44,6 +44,14 @@
     "plugins": [
       "expo-router",
       [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/android-icon-monochrome.png",
+          "color": "#FF7657",
+          "defaultChannel": "kimbo-coaching"
+        }
+      ],
+      [
         "expo-camera",
         {
           "cameraPermission": "Kimbo uses the camera only when you choose to scan a meal.",

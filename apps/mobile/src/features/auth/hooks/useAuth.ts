@@ -10,6 +10,8 @@ import { onboardingRepository } from "@/features/onboarding/storage/onboarding.r
 import { progressHistoryQueryKey, progressHistoryRepository } from "@/features/progress/storage/progress-history.repository";
 import KimboActivityModule from "../../../../modules/live-update";
 import { clearAuthSession, getAuthSession, saveAuthSession } from "@/shared/storage/identity.repository";
+import { unregisterPushToken } from "@/shared/api/health-data.api";
+import { clearKimboNotifications, getGrantedExpoPushToken } from "@/features/notifications/notifications.service";
 
 import { fetchAccountSnapshot, login } from "../api/auth.api";
 
@@ -100,6 +102,16 @@ export function useLogout() {
       } catch (error) {
         console.warn("Kimbo: couldn't clear island state on logout", error);
       }
+      let pushToken: string | null = null;
+      try {
+        pushToken = await getGrantedExpoPushToken();
+      } catch {
+        // Notification cleanup below must still run when token lookup is unavailable.
+      }
+      await Promise.allSettled([
+        pushToken ? unregisterPushToken(pushToken) : Promise.resolve(),
+        clearKimboNotifications(),
+      ]);
       await Promise.all([
         clearAuthSession(),
         onboardingRepository.clearHealthGoal(),
