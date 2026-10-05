@@ -73,10 +73,12 @@ export function LiveActivityCoordinator() {
   }, [session, stepTarget, steps]);
 
   // Give the island today's picture so it is useful without opening the app.
-  const lastSnapshot = useRef("");
+  // No JS-side dedupe: native can reset the snapshot (logout, service restart) without this
+  // component knowing, and a remembered signature then kept the island on defaults forever.
+  // `day` changes at most once a minute, so re-sending is cheap.
   useEffect(() => {
     if (!day || !KimboActivityModule) return;
-    const snapshot = {
+    KimboActivityModule.setIslandSnapshot({
       mood: day.reaction.mood,
       line: day.reaction.line,
       calories: day.calories,
@@ -85,12 +87,7 @@ export function LiveActivityCoordinator() {
       proteinTarget: day.goal.dailyProteinTargetGrams,
       steps: day.steps,
       stepTarget: day.goal.dailyStepTarget,
-    };
-    // The day re-evaluates every minute; only cross the bridge when something visible changed.
-    const signature = JSON.stringify(snapshot);
-    if (signature === lastSnapshot.current) return;
-    lastSnapshot.current = signature;
-    KimboActivityModule.setIslandSnapshot(snapshot);
+    });
   }, [day]);
 
   // Actions tapped on the island: native records them, React Native performs them.

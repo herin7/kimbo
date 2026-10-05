@@ -67,10 +67,11 @@ function RootStack() {
         <Stack.Screen name="meal/voice" options={{ title: "Voice meal" }} />
         <Stack.Screen name="meal/camera" options={{ headerShown: false }} />
       </Stack>
-      {auth ? <LiveActivityCoordinator /> : null}
+      {/* Island + walk surfaces work for local-only plans too; push needs an account. */}
+      {goal ? <LiveActivityCoordinator /> : null}
       {auth ? <KimboNotifications /> : null}
       <MainNavigation />
-      {auth ? <KimboModePermissionGate /> : null}
+      {goal ? <KimboModePermissionGate /> : null}
       {isIntroVisible ? <KimboIntro onDone={hideIntro} /> : null}
     </>
   );
