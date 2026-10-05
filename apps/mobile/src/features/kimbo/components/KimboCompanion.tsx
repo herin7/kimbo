@@ -51,8 +51,9 @@ export function KimboCompanion({
       try {
         if (mood !== "neutral") riveViewRef.triggerInput(moodTrigger[mood]);
         riveViewRef.playIfNeeded();
-      } catch {
-        // Native runtime may reject a trigger if the view was detached during a transition.
+      } catch (error) {
+        // Detached views can reject a trigger mid-transition; anything else hides a broken mood.
+        if (__DEV__) console.warn("Kimbo: Rive mood trigger failed", error);
       }
     }).catch(() => undefined);
     return () => { cancelled = true; };
