@@ -16,11 +16,126 @@ const dateForOffset = (offset: number) => {
   return formatter.format(date);
 };
 
-const profiles = [
-  { id: "10000000-0000-4000-8000-000000000001", name: "Ananya Shah", email: "ananya@kimbo.demo", goalType: "lose" as const, current: 72, target: 66, height: 164, age: 26, calories: 1_850, protein: 105, steps: 8_000, adherence: [0.92, 0.84, 0.96, 0.78, 0.9, 1.03, 0.72] },
-  { id: "10000000-0000-4000-8000-000000000002", name: "Rohan Mehta", email: "rohan@kimbo.demo", goalType: "maintain" as const, current: 78, target: 78, height: 178, age: 29, calories: 2_300, protein: 120, steps: 10_000, adherence: [0.88, 0.94, 0.9, 1.01, 0.86, 0.97, 0.82] },
-  { id: "10000000-0000-4000-8000-000000000003", name: "Mira Kapoor", email: "mira@kimbo.demo", goalType: "gain" as const, current: 55, target: 60, height: 168, age: 24, calories: 2_450, protein: 130, steps: 8_500, adherence: [0.76, 0.89, 0.95, 0.83, 0.98, 0.91, 0.8] },
+type ReviewerProfile = {
+  id: string;
+  name: string;
+  email: string;
+  goalType: "lose" | "maintain" | "gain";
+  current: number;
+  target: number;
+  height: number;
+  age: number;
+  calories: number;
+  protein: number;
+  steps: number;
+  trackingStartsOnDay: number;
+  travelWeeks: number[];
+  calorieBias: number;
+  proteinBias: number;
+  stepBias: number;
+  breakfasts: string[];
+  lunches: string[];
+  dinners: string[];
+  snacks: string[];
+};
+
+const profiles: ReviewerProfile[] = [
+  {
+    id: "10000000-0000-4000-8000-000000000001",
+    name: "Ananya Shah",
+    email: "ananya@kimbo.demo",
+    goalType: "lose",
+    current: 72,
+    target: 66,
+    height: 164,
+    age: 26,
+    calories: 1_850,
+    protein: 105,
+    steps: 8_000,
+    trackingStartsOnDay: 6,
+    travelWeeks: [102, 231],
+    calorieBias: 0.98,
+    proteinBias: 0.96,
+    stepBias: 0.92,
+    breakfasts: ["Besan chilla with mint chutney", "Greek yoghurt, berries and granola", "Masala omelette and toast", "Overnight oats with chia"],
+    lunches: ["Dal, roti and cucumber salad", "Paneer millet bowl", "Rajma rice with kachumber", "Chicken quinoa salad"],
+    dinners: ["Tofu curry with brown rice", "Grilled chicken and vegetables", "Palak paneer with roti", "Lentil soup and sourdough"],
+    snacks: ["Apple with peanut butter", "Roasted chana", "Protein yoghurt", "Dark chocolate and almonds"],
+  },
+  {
+    id: "10000000-0000-4000-8000-000000000002",
+    name: "Rohan Mehta",
+    email: "rohan@kimbo.demo",
+    goalType: "maintain",
+    current: 78,
+    target: 78,
+    height: 178,
+    age: 29,
+    calories: 2_300,
+    protein: 120,
+    steps: 10_000,
+    trackingStartsOnDay: 0,
+    travelWeeks: [166],
+    calorieBias: 1.01,
+    proteinBias: 0.98,
+    stepBias: 1.04,
+    breakfasts: ["Egg bhurji, toast and fruit", "Peanut butter banana oats", "Idli, sambar and coffee", "Protein smoothie with oats"],
+    lunches: ["Chicken rice bowl", "Chole, jeera rice and salad", "Fish curry with rice", "Turkey wrap and fruit"],
+    dinners: ["Homemade chicken biryani", "Dal tadka, roti and sabzi", "Pesto pasta with grilled chicken", "Paneer tikka bowl"],
+    snacks: ["Whey shake and banana", "Makhana", "Cottage cheese and fruit", "Trail mix"],
+  },
+  {
+    id: "10000000-0000-4000-8000-000000000003",
+    name: "Mira Kapoor",
+    email: "mira@kimbo.demo",
+    goalType: "gain",
+    current: 55,
+    target: 60,
+    height: 168,
+    age: 24,
+    calories: 2_450,
+    protein: 130,
+    steps: 8_500,
+    trackingStartsOnDay: 54,
+    travelWeeks: [142, 276],
+    calorieBias: 1.03,
+    proteinBias: 1.04,
+    stepBias: 0.86,
+    breakfasts: ["Peanut butter oats and milk", "Eggs, toast and avocado", "Paneer paratha with curd", "Protein smoothie bowl"],
+    lunches: ["Chicken pulao and raita", "Tofu burrito bowl", "Dal makhani, rice and salad", "Paneer pesto pasta"],
+    dinners: ["Salmon, potatoes and greens", "Soya keema with roti", "Chicken stir-fry noodles", "Rajma quesadilla bowl"],
+    snacks: ["Whey shake and dates", "Banana with mixed nuts", "Paneer sandwich", "Yoghurt with honey"],
+  },
 ];
+
+const clamp = (value: number, minimum: number, maximum: number) => Math.min(maximum, Math.max(minimum, value));
+const wave = (day: number, seed: number) => Math.sin(day * 0.43 + seed) * 0.06 + Math.sin(day * 0.11 + seed * 2) * 0.04;
+const pick = <T,>(items: T[], index: number) => items[index % items.length] as T;
+
+const createDailyPattern = (profile: ReviewerProfile, day: number) => {
+  const weekday = day % 7;
+  const weekend = weekday === 5 || weekday === 6;
+  const inTravelWeek = profile.travelWeeks.some((start) => day >= start && day < start + 7);
+  const hasStarted = day >= profile.trackingStartsOnDay;
+  const lowEffortDay = (day + profile.age) % 19 === 0 || (weekend && (day + profile.height) % 5 === 0);
+  const hasData = hasStarted && !inTravelWeek && !lowEffortDay;
+  const recentMomentum = day > 300 ? 0.035 : day > 180 ? 0.01 : -0.025;
+  const restaurantDay = weekend && (day + profile.current) % 4 === 0;
+  const workoutDay = (day + profile.height) % 3 === 0 && !weekend;
+  const caloriesRatio = clamp(profile.calorieBias + recentMomentum + wave(day, profile.age) + (restaurantDay ? 0.14 : 0) - (workoutDay && profile.goalType === "gain" ? 0 : 0.015), 0.7, 1.24);
+  const proteinRatio = clamp(profile.proteinBias + recentMomentum + wave(day, profile.current) * 0.7 - (restaurantDay ? 0.08 : 0), 0.62, 1.16);
+  const stepsRatio = clamp(profile.stepBias + wave(day, profile.height) + (workoutDay ? 0.18 : 0) - (weekend ? 0.1 : 0) - (restaurantDay ? 0.05 : 0), 0.42, 1.28);
+
+  return {
+    hasData,
+    calories: Math.round(profile.calories * caloriesRatio),
+    protein: Math.round(profile.protein * proteinRatio),
+    steps: Math.round(profile.steps * stepsRatio),
+    weekend,
+    restaurantDay,
+    workoutDay,
+  };
+};
 
 const { db, close } = createDatabase(databaseUrl);
 try {
@@ -56,40 +171,40 @@ try {
       };
       await tx.insert(healthGoals).values(goal).onConflictDoUpdate({ target: healthGoals.userId, set: goal });
 
-      // Keep a full year of lightweight daily history for range and calendar stress-testing.
-      // Detailed meals/walks stay limited to the latest week so login payloads remain small.
+      // Each reviewer has a full history, but it includes holidays, low-effort days, weekends,
+      // and improving habits instead of a suspiciously perfect pattern. Detailed entries cover
+      // the latest two weeks; the rest stays as compact daily summaries for fast login.
       for (let index = 0; index < 365; index += 1) {
         const date = dateForOffset(index - 364);
-        const recentIndex = index - 358;
-        const isRecentWeek = recentIndex >= 0;
-        const baseline = profile.adherence[(isRecentWeek ? recentIndex : index) % profile.adherence.length] ?? 0.8;
-        const seasonalShift = Math.sin(index / 23) * 0.09 + ((index % 9) - 4) * 0.008;
-        const ratio = isRecentWeek ? baseline : Math.max(0.5, Math.min(1.08, baseline + seasonalShift));
-        const hasData = isRecentWeek || (index % 13 !== 0 && index % 29 !== 0);
-        const calories = Math.round(profile.calories * ratio);
-        const protein = Math.round(profile.protein * Math.min(1.05, ratio + 0.08));
-        const steps = Math.round(profile.steps * Math.min(1.12, ratio + (index % 2 === 0 ? 0.08 : -0.03)));
+        const pattern = createDailyPattern(profile, index);
+        const recentIndex = index - 351;
+        const isDetailedWindow = recentIndex >= 0 && pattern.hasData;
         await tx.insert(dailyHealthSummaries).values({
           userId: profile.id,
           date,
-          calories: hasData ? calories : 0,
-          proteinGrams: hasData ? protein : 0,
-          steps: hasData ? steps : null,
-          hasMealData: hasData,
-          hasActivityData: hasData,
+          calories: pattern.hasData ? pattern.calories : 0,
+          proteinGrams: pattern.hasData ? pattern.protein : 0,
+          steps: pattern.hasData ? pattern.steps : null,
+          hasMealData: pattern.hasData,
+          hasActivityData: pattern.hasData,
         });
 
-        if (!isRecentWeek) continue;
+        if (!isDetailedWindow) continue;
 
-        const mealsForDay = [
-          { type: "breakfast" as const, hour: "08:30:00", name: recentIndex % 2 === 0 ? "Masala omelette and toast" : "Greek yoghurt fruit bowl", share: 0.28, proteinShare: 0.3 },
-          { type: "lunch" as const, hour: "13:00:00", name: recentIndex % 3 === 0 ? "Paneer rice bowl" : "Dal, roti and salad", share: 0.4, proteinShare: 0.42 },
-          { type: "dinner" as const, hour: "20:00:00", name: recentIndex % 2 === 0 ? "Grilled chicken and vegetables" : "Tofu curry and rice", share: 0.32, proteinShare: 0.28 },
+        const includesSnack = (index + profile.age) % 3 !== 0;
+        const dinnerShare = 1 - 0.25 - 0.39 - (includesSnack ? 0.06 : 0);
+        const mealsForDay: Array<{ type: "breakfast" | "lunch" | "dinner" | "snack"; hour: string; name: string; share: number; proteinShare: number }> = [
+          { type: "breakfast" as const, hour: pattern.weekend ? "09:20:00" : "08:10:00", name: pick(profile.breakfasts, index), share: 0.25, proteinShare: 0.25 },
+          { type: "lunch" as const, hour: "13:15:00", name: pick(profile.lunches, index + 1), share: 0.39, proteinShare: 0.42 },
+          { type: "dinner" as const, hour: pattern.weekend ? "20:45:00" : "20:10:00", name: pattern.restaurantDay ? "Restaurant meal with friends" : pick(profile.dinners, index + 2), share: dinnerShare, proteinShare: pattern.restaurantDay ? 0.33 : 0.28 },
         ];
+        if (includesSnack) {
+          mealsForDay.push({ type: "snack", hour: "16:45:00", name: pick(profile.snacks, index + 3), share: 0.06, proteinShare: 0.05 });
+        }
         for (const sample of mealsForDay) {
           const mealId = randomUUID();
-          const mealCalories = Math.round(calories * sample.share);
-          const mealProtein = Math.round(protein * sample.proteinShare);
+          const mealCalories = Math.round(pattern.calories * sample.share);
+          const mealProtein = Math.round(pattern.protein * sample.proteinShare);
           await tx.insert(meals).values({
             id: mealId,
             userId: profile.id,
@@ -116,18 +231,20 @@ try {
           });
         }
 
-        if (recentIndex < 6) {
+        if (pattern.workoutDay || recentIndex % 3 !== 0) {
+          const walkingSteps = Math.round(pattern.steps * (pattern.workoutDay ? 0.5 : 0.32));
+          const startingSteps = Math.max(0, pattern.steps - walkingSteps);
           await tx.insert(activitySessions).values({
             id: randomUUID(),
             userId: profile.id,
             type: "walking",
             state: "ended",
-            startedAt: new Date(`${date}T18:00:00+05:30`),
-            endedAt: new Date(`${date}T18:32:00+05:30`),
-            startingSteps: 0,
-            currentSteps: steps,
-            endingSteps: steps,
-            estimatedDistanceMeters: Math.round(steps * 0.76),
+            startedAt: new Date(`${date}T${pattern.weekend ? "08:15:00" : "18:25:00"}+05:30`),
+            endedAt: new Date(`${date}T${pattern.weekend ? "09:03:00" : "19:02:00"}+05:30`),
+            startingSteps,
+            currentSteps: pattern.steps,
+            endingSteps: pattern.steps,
+            estimatedDistanceMeters: Math.round(walkingSteps * 0.76),
           });
         }
       }

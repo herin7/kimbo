@@ -29,6 +29,7 @@ describe("assessMealQuality", () => {
     expect(assessMealQuality({ calories: 400, proteinGrams: 35, carbsGrams: 30, fatGrams: 10 })).toBe("great");
     expect(assessMealQuality({ calories: 800, proteinGrams: 10, carbsGrams: 80, fatGrams: 45 })).toBe("poor");
     expect(assessMealQuality({ calories: 950, proteinGrams: 30, carbsGrams: 120, fatGrams: 35 })).toBe("heavy");
+    expect(assessMealQuality({ calories: 1_050, proteinGrams: 70, carbsGrams: 100, fatGrams: 35 })).toBe("heavy");
     expect(assessMealQuality({ calories: 500, proteinGrams: 20, carbsGrams: 70, fatGrams: 15 })).toBe("balanced");
     expect(assessMealQuality({ calories: 0, proteinGrams: 0, carbsGrams: 0, fatGrams: 0 })).toBe("balanced");
   });

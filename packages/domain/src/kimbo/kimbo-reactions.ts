@@ -42,9 +42,12 @@ export function assessMealQuality(totals: Nutrition): MealQuality {
   if (totals.calories <= 0) return "balanced";
   const proteinShare = (totals.proteinGrams * 4) / totals.calories;
   const fatShare = (totals.fatGrams * 9) / totals.calories;
-  if (proteinShare >= 0.25 && fatShare <= 0.4) return "great";
+  // Protein is a useful signal, not a health halo. A very large or fat-heavy meal should not
+  // become "great" just because it contains chicken, cheese, or a protein supplement.
   if (proteinShare < 0.1 && (fatShare >= 0.45 || totals.calories >= 700)) return "poor";
+  if (totals.calories >= 1_000 || (totals.calories >= 750 && fatShare >= 0.38)) return "heavy";
   if (fatShare >= 0.45 || (totals.calories >= 900 && proteinShare < 0.2)) return "heavy";
+  if (proteinShare >= 0.25 && fatShare <= 0.35 && totals.calories <= 650) return "great";
   return "balanced";
 }
 
@@ -55,7 +58,7 @@ export function reactToMeal(totals: Nutrition, proteinLeftGrams: number): KimboR
     case "great":
       return { mood: "happy", topic: "meal", line: `Now that's a plate! ${protein} g of protein in one go.` };
     case "heavy":
-      return { mood: "sad", topic: "meal", line: "That one was heavy. Something lighter next and we're even." };
+      return { mood: "sad", topic: "meal", line: "That was a lot for one meal. No guilt—make the next choice lighter and more balanced." };
     case "poor":
       return {
         mood: "angry",
